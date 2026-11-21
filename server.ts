@@ -4,7 +4,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { DEFAULT_ARCHIVE } from './src/data/defaultArchive.ts';
-import type { ArchiveData, Lecture, LectureSeries, ProfessorProfile } from './src/types/archive.ts';
+import type {
+  ApplicationStatus,
+  ArchiveData,
+  Lecture,
+  LectureApplication,
+  LectureSeries,
+  ProfessorProfile,
+} from './src/types/archive.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +41,10 @@ function readArchive(): ArchiveData {
     if (!parsed || !parsed.profile || !Array.isArray(parsed.lectures) || !Array.isArray(parsed.series)) {
       return structuredClone(DEFAULT_ARCHIVE);
     }
-    return parsed;
+    return {
+      ...parsed,
+      applications: Array.isArray(parsed.applications) ? parsed.applications : [],
+    };
   } catch {
     return structuredClone(DEFAULT_ARCHIVE);
   }
@@ -48,20 +58,63 @@ function writeArchive(data: ArchiveData): void {
 function sanitizePublicArchive(data: ArchiveData): ArchiveData {
   const hasPasscode = Boolean(data.profile.studioPasscode && data.profile.studioPasscode.trim().length > 0);
   return {
-    ...data,
     profile: {
       ...data.profile,
       hasPasscode,
       studioPasscode: undefined,
     },
+    series: data.series,
+    lectures: data.lectures,
   };
 }
 
 function checkPasscode(req: express.Request, data: ArchiveData): boolean {
   const configured = (data.profile.studioPasscode ?? '').trim();
   if (!configured) return true;
-  const provided = String(req.headers['x-studio-passcode'] ?? '').trim();
+  const provided = String(
+    req.headers['x-studio-passcode'] ?? req.query.passcode ?? ''
+  ).trim();
   return provided === configured;
+}
+
+function isValidAppsScriptUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('https://script.google.com/macros/s/');
+}
+
+async function forwardToGoogleSheetWebhook(
+  webhookUrl: string | undefined,
+  item: LectureApplication
+): Promise<boolean> {
+  if (!isValidAppsScriptUrl(webhookUrl)) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(webhookUrl!.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: item.id,
+        createdAt: item.createdAt,
+        name: item.name,
+        phone: item.phone,
+        lectureTitle: item.lectureTitle,
+        note: item.note ?? '',
+        status: item.status,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function escapeCsvCell(val: string): string {
+  const safe = /^[=+\-@]/.test(val) ? `'${val}` : val;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 async function startServer(): Promise<void> {
@@ -320,6 +373,9 @@ async function startServer(): Promise<void> {
     const preservedPasscode = incoming.profile.studioPasscode ?? archive.profile.studioPasscode ?? '';
     const merged: ArchiveData = {
       ...incoming,
+      applications: Array.isArray(incoming.applications)
+        ? incoming.applications
+        : archive.applications ?? [],
       profile: {
         ...incoming.profile,
         studioPasscode: preservedPasscode,
@@ -327,6 +383,159 @@ async function startServer(): Promise<void> {
     };
     writeArchive(merged);
     res.json({ archive: sanitizePublicArchive(merged) });
+  });
+
+  // Public Lecture Application Submission
+  app.post('/api/applications', async (req, res) => {
+    const archive = readArchive();
+    const body = req.body as Partial<LectureApplication>;
+    const name = String(body.name ?? '').trim().slice(0, 60);
+    const phone = String(body.phone ?? '').trim().slice(0, 30);
+    const lectureId = String(body.lectureId ?? '').trim().slice(0, 120);
+    const lectureTitle = String(body.lectureTitle ?? '').trim().slice(0, 200);
+    const note = String(body.note ?? '').trim().slice(0, 500);
+
+    if (!name) {
+      res.status(400).json({ error: '성함을 입력해 주세요.' });
+      return;
+    }
+    if (!phone || phone.replace(/[^0-9]/g, '').length < 9) {
+      res.status(400).json({ error: '올바른 휴대 번호를 입력해 주세요.' });
+      return;
+    }
+    if (!lectureTitle) {
+      res.status(400).json({ error: '원하는 강의를 선택해 주세요.' });
+      return;
+    }
+
+    const item: LectureApplication = {
+      id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      phone,
+      lectureId,
+      lectureTitle,
+      note,
+      status: 'pending',
+      syncedToSheet: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    const synced = await forwardToGoogleSheetWebhook(
+      archive.profile.googleSheetWebhookUrl,
+      item
+    );
+    item.syncedToSheet = synced;
+
+    archive.applications = [item, ...(archive.applications ?? [])];
+    writeArchive(archive);
+    res.status(201).json({ ok: true, id: item.id, syncedToSheet: synced });
+  });
+
+  // Professor-only Applications Management
+  app.get('/api/applications', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+    res.json({ applications: archive.applications ?? [] });
+  });
+
+  app.patch('/api/applications/:id', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+    const status = (req.body as { status?: ApplicationStatus }).status;
+    if (!status || !['pending', 'contacted', 'enrolled'].includes(status)) {
+      res.status(400).json({ error: '유효한 상태 값이 아닙니다.' });
+      return;
+    }
+    const list = archive.applications ?? [];
+    const idx = list.findIndex((a) => a.id === req.params.id);
+    if (idx === -1) {
+      res.status(404).json({ error: '신청 내역을 찾을 수 없습니다.' });
+      return;
+    }
+    list[idx] = { ...list[idx], status };
+    archive.applications = list;
+    writeArchive(archive);
+    res.json({ applications: list });
+  });
+
+  app.delete('/api/applications/:id', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+    archive.applications = (archive.applications ?? []).filter(
+      (a) => a.id !== req.params.id
+    );
+    writeArchive(archive);
+    res.json({ applications: archive.applications });
+  });
+
+  app.post('/api/applications/sync', async (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+    const webhookUrl = archive.profile.googleSheetWebhookUrl;
+    if (!isValidAppsScriptUrl(webhookUrl)) {
+      res.status(400).json({
+        error: '유효한 Google Apps Script 웹 앱 URL(https://script.google.com/macros/s/...)을 먼저 저장해 주세요.',
+      });
+      return;
+    }
+
+    const list = archive.applications ?? [];
+    let syncedCount = 0;
+    for (let i = 0; i < list.length; i++) {
+      if (!list[i].syncedToSheet) {
+        const ok = await forwardToGoogleSheetWebhook(webhookUrl, list[i]);
+        if (ok) {
+          list[i] = { ...list[i], syncedToSheet: true };
+          syncedCount++;
+        }
+      }
+    }
+    archive.applications = list;
+    writeArchive(archive);
+    res.json({ syncedCount, applications: list });
+  });
+
+  app.get('/api/applications/export.csv', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+    const STATUS_KO: Record<ApplicationStatus, string> = {
+      pending: '접수됨',
+      contacted: '안내 완료',
+      enrolled: '수강 확정',
+    };
+
+    const header = ['신청일시', '이름', '휴대 번호', '원하는 강의', '메모', '처리 상태'];
+    const rows = (archive.applications ?? []).map((item) => [
+      escapeCsvCell(new Date(item.createdAt).toLocaleString('ko-KR')),
+      escapeCsvCell(item.name),
+      escapeCsvCell(item.phone),
+      escapeCsvCell(item.lectureTitle),
+      escapeCsvCell(item.note ?? ''),
+      escapeCsvCell(STATUS_KO[item.status] ?? item.status),
+    ]);
+
+    const csvContent = '\uFEFF' + [header.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="lecture-applications-${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    res.send(csvContent);
   });
 
   const isProd = process.env.NODE_ENV === 'production';

@@ -47,6 +47,20 @@ export interface LectureSeries {
   order: number;
 }
 
+export type ApplicationStatus = 'pending' | 'contacted' | 'enrolled';
+
+export interface LectureApplication {
+  id: string;
+  name: string;
+  phone: string;
+  lectureId: string;
+  lectureTitle: string;
+  note?: string;
+  status: ApplicationStatus;
+  syncedToSheet: boolean;
+  createdAt: string;
+}
+
 export interface ProfessorProfile {
   siteTitle: string;
   siteSubtitle: string;
@@ -59,6 +73,8 @@ export interface ProfessorProfile {
   email: string;
   officeHours: string;
   studioImageUrl: string;
+  googleSheetUrl?: string;
+  googleSheetWebhookUrl?: string;
   hasPasscode?: boolean;
   studioPasscode?: string;
 }
@@ -67,4 +83,5 @@ export interface ArchiveData {
   profile: ProfessorProfile;
   series: LectureSeries[];
   lectures: Lecture[];
+  applications?: LectureApplication[];
 }

@@ -13,10 +13,16 @@ import {
   Settings,
   ListVideo,
   Pencil,
+  Table2,
+  Copy,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import type {
+  ApplicationStatus,
   ArchiveData,
   Lecture,
+  LectureApplication,
   LectureChapter,
   LectureSeries,
   LectureStatus,
@@ -26,13 +32,25 @@ import type {
 import { COVER_PRESETS } from '../data/defaultArchive.ts';
 import { formatKoreanDate, parseVideoUrl } from '../utils/video.ts';
 
-export type StudioTab = 'editor' | 'lectures' | 'series' | 'settings';
+export type StudioTab = 'editor' | 'lectures' | 'series' | 'applications' | 'settings';
+
+const APPS_SCRIPT_SNIPPET = `function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['신청일시', '이름', '휴대 번호', '원하는 강의', '메모', '처리 상태']);
+  }
+  var data = JSON.parse(e.postData.contents);
+  var dt = new Date(data.createdAt || new Date()).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  sheet.appendRow([dt, data.name || '', data.phone || '', data.lectureTitle || '', data.note || '', '접수됨']);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+}`;
 
 interface StudioDrawerProps {
   isOpen: boolean;
   initialTab: StudioTab;
   editingLecture: Lecture | null;
   archive: ArchiveData;
+  applications: LectureApplication[];
   passcodeHeader: string;
   onPasscodeVerified: (code: string) => void;
   onClose: () => void;
@@ -42,6 +60,10 @@ interface StudioDrawerProps {
   onDeleteSeries: (id: string) => Promise<void>;
   onSaveProfile: (profile: Partial<ProfessorProfile>) => Promise<void>;
   onImportArchive: (data: ArchiveData) => Promise<void>;
+  onFetchApplications: () => Promise<void>;
+  onUpdateApplicationStatus: (id: string, status: ApplicationStatus) => Promise<void>;
+  onDeleteApplication: (id: string) => Promise<void>;
+  onSyncApplicationsToSheet: () => Promise<number>;
   onEditSelect: (lecture: Lecture) => void;
   onClearEditing: () => void;
 }
@@ -75,6 +97,7 @@ export function StudioDrawer({
   initialTab,
   editingLecture,
   archive,
+  applications,
   passcodeHeader,
   onPasscodeVerified,
   onClose,
@@ -84,6 +107,10 @@ export function StudioDrawer({
   onDeleteSeries,
   onSaveProfile,
   onImportArchive,
+  onFetchApplications,
+  onUpdateApplicationStatus,
+  onDeleteApplication,
+  onSyncApplicationsToSheet,
   onEditSelect,
   onClearEditing,
 }: StudioDrawerProps) {
@@ -122,10 +149,11 @@ export function StudioDrawer({
 
     if (!archive.profile.hasPasscode || passcodeHeader) {
       setUnlocked(true);
+      void onFetchApplications();
     } else {
       setUnlocked(false);
     }
-  }, [isOpen, initialTab, archive.profile.hasPasscode, passcodeHeader]);
+  }, [isOpen, initialTab, archive.profile.hasPasscode, passcodeHeader, onFetchApplications]);
 
   useEffect(() => {
     if (editingLecture) {
@@ -164,6 +192,7 @@ export function StudioDrawer({
       onPasscodeVerified(passcodeInput);
       setUnlocked(true);
       setPasscodeInput('');
+      void onFetchApplications();
     } catch {
       setAuthError('인증 확인 중 오류가 발생했습니다.');
     }
@@ -485,6 +514,22 @@ export function StudioDrawer({
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 <span>강좌 시리즈 ({archive.series.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('applications');
+                  setFeedback(null);
+                  void onFetchApplications();
+                }}
+                className={`inline-flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  activeTab === 'applications'
+                    ? 'border-[#1D3557] text-[#1D3557]'
+                    : 'border-transparent text-stone-600 hover:text-[#161616]'
+                }`}
+              >
+                <Table2 className="w-3.5 h-3.5" />
+                <span>수강 신청 · 구글 시트 ({applications.length})</span>
               </button>
               <button
                 type="button"
@@ -1161,7 +1206,291 @@ export function StudioDrawer({
                 </div>
               )}
 
-              {/* TAB 4: PROFILE & BACKUP */}
+              {/* TAB 4: APPLICATIONS & GOOGLE SHEETS */}
+              {activeTab === 'applications' && (
+                <div className="space-y-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
+                    <div>
+                      <h3 className="font-serif text-xl font-semibold text-[#161616]">
+                        강의 신청 접수 현황 및 구글 시트 연동
+                      </h3>
+                      <p className="text-xs text-stone-600 mt-1">
+                        메인 화면의 「강의 신청」 버튼으로 접수된 신청자 명단입니다. CSV 또는 구글 시트 자동 전송으로 열어보실 수 있습니다.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <a
+                        href={`/api/applications/export.csv${
+                          passcodeHeader
+                            ? `?passcode=${encodeURIComponent(passcodeHeader)}`
+                            : ''
+                        }`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors whitespace-nowrap"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>구글 시트용 CSV 다운로드</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const STATUS_KO: Record<ApplicationStatus, string> = {
+                            pending: '접수됨',
+                            contacted: '안내 완료',
+                            enrolled: '수강 확정',
+                          };
+                          const header = '신청일시\t이름\t휴대 번호\t원하는 강의\t메모\t처리 상태';
+                          const rows = applications.map((a) =>
+                            [
+                              new Date(a.createdAt).toLocaleString('ko-KR'),
+                              a.name,
+                              a.phone,
+                              a.lectureTitle,
+                              (a.note ?? '').replace(/\s+/g, ' '),
+                              STATUS_KO[a.status],
+                            ].join('\t')
+                          );
+                          await navigator.clipboard.writeText([header, ...rows].join('\n'));
+                          setFeedback({
+                            type: 'ok',
+                            text: '표 데이터가 복사되었습니다. 구글 시트 A1 셀에서 Ctrl+V(붙여넣기) 하세요.',
+                          });
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-stone-300 bg-white hover:bg-[#F3EFE6] transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>구글 시트 붙여넣기 복사</span>
+                      </button>
+                      {archive.profile.googleSheetUrl && (
+                        <a
+                          href={archive.profile.googleSheetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-[#1D3557] text-[#1D3557] hover:bg-[#EEF2F7] transition-colors whitespace-nowrap"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>내 구글 시트 열기</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Applications Ledger */}
+                  {applications.length === 0 ? (
+                    <div className="p-10 border border-stone-200 bg-white text-center">
+                      <p className="font-serif text-lg text-stone-700">
+                        아직 접수된 강의 신청 내역이 없습니다.
+                      </p>
+                      <p className="mt-1.5 text-xs text-stone-500">
+                        메인 화면의 「강의 신청」 버튼에서 테스트 신청을 제출하면 이곳과 구글 시트 연동 목록에 바로 기록됩니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-stone-200 bg-white">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-stone-200 bg-[#F4F1EA] font-mono text-stone-600">
+                            <th className="py-3 px-4 font-medium whitespace-nowrap">신청일시</th>
+                            <th className="py-3 px-4 font-medium whitespace-nowrap">이름</th>
+                            <th className="py-3 px-4 font-medium whitespace-nowrap">휴대 번호</th>
+                            <th className="py-3 px-4 font-medium">원하는 강의</th>
+                            <th className="py-3 px-4 font-medium whitespace-nowrap">상태</th>
+                            <th className="py-3 px-4 font-medium whitespace-nowrap">시트 전송</th>
+                            <th className="py-3 px-4 font-medium text-right whitespace-nowrap">관리</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-200">
+                          {applications.map((item) => (
+                            <tr key={item.id} className="hover:bg-[#FAF9F6]">
+                              <td className="py-3 px-4 font-mono text-stone-500 tabular-nums whitespace-nowrap">
+                                {new Date(item.createdAt).toLocaleString('ko-KR', {
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td className="py-3 px-4 font-medium text-[#161616] whitespace-nowrap">
+                                {item.name}
+                              </td>
+                              <td className="py-3 px-4 font-mono tabular-nums text-stone-700 whitespace-nowrap">
+                                {item.phone}
+                              </td>
+                              <td className="py-3 px-4 text-stone-700">
+                                <p className="font-medium text-[#161616]">{item.lectureTitle}</p>
+                                {item.note && (
+                                  <p className="text-[11px] text-stone-500 mt-0.5">{item.note}</p>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <select
+                                  value={item.status}
+                                  onChange={(e) =>
+                                    void onUpdateApplicationStatus(
+                                      item.id,
+                                      e.target.value as ApplicationStatus
+                                    )
+                                  }
+                                  className="px-2 py-1 text-xs border border-stone-300 bg-white cursor-pointer"
+                                >
+                                  <option value="pending">접수됨</option>
+                                  <option value="contacted">안내 완료</option>
+                                  <option value="enrolled">수강 확정</option>
+                                </select>
+                              </td>
+                              <td className="py-3 px-4 font-mono whitespace-nowrap">
+                                {item.syncedToSheet ? (
+                                  <span className="text-[#1D3557]">전송 완료</span>
+                                ) : (
+                                  <span className="text-stone-400">대기</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => void onDeleteApplication(item.id)}
+                                  aria-label="신청 내역 삭제"
+                                  className="p-1 text-stone-400 hover:text-red-700 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Google Sheets Connection Configuration & Guide */}
+                  <div className="p-6 border border-stone-200 bg-white space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-200">
+                      <div>
+                        <h4 className="font-serif text-lg font-semibold text-[#161616]">
+                          구글 시트(Google Sheets) 실시간 자동 연동 설정
+                        </h4>
+                        <p className="text-xs text-stone-600 mt-1">
+                          아래 두 주소를 저장해 두면 학생이 「강의 신청」을 누를 때마다 교수님의 구글 시트에 자동으로 새 행이 추가됩니다.
+                        </p>
+                      </div>
+                      {archive.profile.googleSheetWebhookUrl && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const count = await onSyncApplicationsToSheet();
+                              setFeedback({
+                                type: 'ok',
+                                text:
+                                  count > 0
+                                    ? `미전송 내역 ${count}건을 구글 시트로 전송했습니다.`
+                                    : '모든 내역이 이미 전송되었거나 연결을 확인해 주세요.',
+                              });
+                            } catch (err) {
+                              setFeedback({
+                                type: 'err',
+                                text: err instanceof Error ? err.message : '동기화 오류',
+                              });
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-stone-300 bg-[#F3EFE6] hover:bg-[#E7E0D3] cursor-pointer shrink-0"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>미전송 내역 지금 보내기</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleSaveProfileSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          1) 내 구글 시트 URL (바로 열기 버튼용)
+                        </label>
+                        <input
+                          type="url"
+                          value={profileForm.googleSheetUrl || ''}
+                          onChange={(e) =>
+                            setProfileForm((p) => ({ ...p, googleSheetUrl: e.target.value }))
+                          }
+                          placeholder="https://docs.google.com/spreadsheets/d/..."
+                          className="w-full px-3 py-2 text-xs font-mono bg-[#FAF9F6] border border-stone-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          2) Google Apps Script 웹 앱 URL (자동 행 추가용)
+                        </label>
+                        <input
+                          type="url"
+                          value={profileForm.googleSheetWebhookUrl || ''}
+                          onChange={(e) =>
+                            setProfileForm((p) => ({
+                              ...p,
+                              googleSheetWebhookUrl: e.target.value,
+                            }))
+                          }
+                          placeholder="https://script.google.com/macros/s/.../exec"
+                          className="w-full px-3 py-2 text-xs font-mono bg-[#FAF9F6] border border-stone-300"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="px-4 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] cursor-pointer"
+                      >
+                        구글 시트 연동 주소 저장
+                      </button>
+                    </form>
+
+                    {/* Step-by-step Guide */}
+                    <div className="pt-5 border-t border-stone-200 space-y-3 text-xs text-stone-700 leading-relaxed">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold text-[#161616]">
+                          구글 시트 연결 및 사용 안내 (2분 설정)
+                        </p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(APPS_SCRIPT_SNIPPET);
+                            setFeedback({
+                              type: 'ok',
+                              text: 'Google Apps Script 코드가 복사되었습니다.',
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium border border-stone-300 bg-[#F3EFE6] hover:bg-[#E7E0D3] cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>연동 스크립트 코드 복사</span>
+                        </button>
+                      </div>
+                      <ol className="list-decimal pl-5 space-y-1.5 text-stone-600">
+                        <li>
+                          <strong className="text-[#161616]">방법 A (가장 간편 · CSV 열기):</strong>{' '}
+                          위쪽 <strong className="text-[#161616]">「구글 시트용 CSV 다운로드」</strong>를 누른 뒤, Google Sheets에서{' '}
+                          <code className="font-mono bg-stone-100 px-1">파일 → 가져오기 → 업로드</code>를 선택하면 한글 깨짐 없이 바로 표가 열립니다. (또는 「구글 시트 붙여넣기 복사」 후 시트에서 바로 붙여넣기)
+                        </li>
+                        <li>
+                          <strong className="text-[#161616]">방법 B (실시간 자동 기록):</strong>{' '}
+                          Google Sheets 새 문서를 열고 상단 메뉴 <code className="font-mono bg-stone-100 px-1">확장 프로그램 → Apps Script</code>에 들어갑니다.
+                        </li>
+                        <li>
+                          기존 코드를 지우고 위 <strong className="text-[#161616]">「연동 스크립트 코드 복사」</strong>로 복사한 코드를 붙여넣고 저장합니다.
+                        </li>
+                        <li>
+                          우측 상단 <code className="font-mono bg-stone-100 px-1">배포 → 새 배포</code> 클릭 → 유형을 <strong>웹 앱</strong>, 액세스 권한을 <strong>모든 사용자</strong>로 선택 후 배포합니다.
+                        </li>
+                        <li>
+                          생성된 <code className="font-mono bg-stone-100 px-1">https://script.google.com/macros/s/.../exec</code> 주소를 위 2번 칸에 저장하면, 이후 모든 「강의 신청」이 구글 시트에 자동으로 한 줄씩 기록됩니다.
+                        </li>
+                      </ol>
+                      <pre className="p-3 bg-[#F4F1EA] border border-stone-200 font-mono text-[11px] text-stone-700 overflow-x-auto leading-normal">
+                        {APPS_SCRIPT_SNIPPET}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: PROFILE & BACKUP */}
               {activeTab === 'settings' && (
                 <div className="space-y-8 max-w-2xl">
                   <form onSubmit={handleSaveProfileSubmit} className="space-y-5">

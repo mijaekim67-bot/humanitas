@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_ARCHIVE } from './data/defaultArchive.ts';
 import type {
+  ApplicationStatus,
   ArchiveData,
   Lecture,
+  LectureApplication,
   LectureSeries,
   ProfessorProfile,
 } from './types/archive.ts';
@@ -12,6 +14,7 @@ import { LectureCatalog } from './components/LectureCatalog.tsx';
 import { ArchiveIndexTable } from './components/ArchiveIndexTable.tsx';
 import { ProfessorAboutSection } from './components/ProfessorAboutSection.tsx';
 import { ScreeningModal } from './components/ScreeningModal.tsx';
+import { RegistrationModal } from './components/RegistrationModal.tsx';
 import { StudioDrawer, type StudioTab } from './components/StudioDrawer.tsx';
 
 export default function App() {
@@ -26,6 +29,8 @@ export default function App() {
   const [studioTab, setStudioTab] = useState<StudioTab>('editor');
   const [editingLecture, setEditingLecture] = useState<Lecture | null>(null);
   const [passcodeHeader, setPasscodeHeader] = useState<string>('');
+  const [registrationOpen, setRegistrationOpen] = useState<boolean>(false);
+  const [applications, setApplications] = useState<LectureApplication[]>([]);
 
   const fetchArchive = useCallback(async () => {
     try {
@@ -192,6 +197,60 @@ export default function App() {
     setArchive(data.archive);
   };
 
+  const handleFetchApplications = useCallback(async () => {
+    try {
+      const res = await fetch('/api/applications', {
+        headers: passcodeHeader ? { 'x-studio-passcode': passcodeHeader } : {},
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { applications: LectureApplication[] };
+      setApplications(data.applications ?? []);
+    } catch {
+      // ignore non-critical fetch errors
+    }
+  }, [passcodeHeader]);
+
+  const handleUpdateApplicationStatus = async (
+    id: string,
+    status: ApplicationStatus
+  ) => {
+    const res = await fetch(`/api/applications/${id}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { applications: LectureApplication[] };
+    setApplications(data.applications ?? []);
+  };
+
+  const handleDeleteApplication = async (id: string) => {
+    const res = await fetch(`/api/applications/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { applications: LectureApplication[] };
+    setApplications(data.applications ?? []);
+  };
+
+  const handleSyncApplicationsToSheet = async (): Promise<number> => {
+    const res = await fetch('/api/applications/sync', {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(err.error || '구글 시트 전송에 실패했습니다.');
+    }
+    const data = (await res.json()) as {
+      syncedCount: number;
+      applications: LectureApplication[];
+    };
+    setApplications(data.applications ?? []);
+    return data.syncedCount;
+  };
+
   return (
     <div id="top" className="min-h-screen flex flex-col bg-[#FAF9F6] text-[#161616]">
       <Header
@@ -223,6 +282,7 @@ export default function App() {
               allPublishedLectures={publishedLectures}
               onWatchLecture={(lec) => void handleWatchLecture(lec)}
               onOpenStudio={() => openStudioAt('editor', null)}
+              onOpenRegistration={() => setRegistrationOpen(true)}
             />
 
             <LectureCatalog
@@ -271,6 +331,20 @@ export default function App() {
             </a>
             <button
               type="button"
+              onClick={() => setRegistrationOpen(true)}
+              className="hover:text-[#161616] transition-colors cursor-pointer"
+            >
+              강의 신청
+            </button>
+            <button
+              type="button"
+              onClick={() => openStudioAt('applications', null)}
+              className="hover:text-[#161616] transition-colors cursor-pointer"
+            >
+              신청자 명단
+            </button>
+            <button
+              type="button"
               onClick={() => openStudioAt('editor', null)}
               className="font-medium text-[#1D3557] hover:underline underline-offset-4 cursor-pointer"
             >
@@ -287,11 +361,21 @@ export default function App() {
         onEditLecture={(lec) => openStudioAt('editor', lec)}
       />
 
+      <RegistrationModal
+        isOpen={registrationOpen}
+        lectures={archive.lectures}
+        seriesList={archive.series}
+        affiliationTitle={archive.profile.affiliation}
+        onClose={() => setRegistrationOpen(false)}
+        onSubmitted={() => void handleFetchApplications()}
+      />
+
       <StudioDrawer
         isOpen={studioOpen}
         initialTab={studioTab}
         editingLecture={editingLecture}
         archive={archive}
+        applications={applications}
         passcodeHeader={passcodeHeader}
         onPasscodeVerified={(code) => setPasscodeHeader(code)}
         onClose={() => setStudioOpen(false)}
@@ -301,6 +385,10 @@ export default function App() {
         onDeleteSeries={handleDeleteSeries}
         onSaveProfile={handleSaveProfile}
         onImportArchive={handleImportArchive}
+        onFetchApplications={handleFetchApplications}
+        onUpdateApplicationStatus={handleUpdateApplicationStatus}
+        onDeleteApplication={handleDeleteApplication}
+        onSyncApplicationsToSheet={handleSyncApplicationsToSheet}
         onEditSelect={(lec) => openStudioAt('editor', lec)}
         onClearEditing={() => setEditingLecture(null)}
       />

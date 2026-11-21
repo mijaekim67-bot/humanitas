@@ -1,4 +1,4 @@
-import { Play, BookOpen } from 'lucide-react';
+import { Play, BookOpen, ClipboardPen } from 'lucide-react';
 import type { Lecture, LectureSeries, ProfessorProfile } from '../types/archive.ts';
 import { formatKoreanDate, parseDurationToMinutes } from '../utils/video.ts';
 import { ArtFrame } from './ArtFrame.tsx';
@@ -10,6 +10,7 @@ interface HeroSectionProps {
   allPublishedLectures: Lecture[];
   onWatchLecture: (lecture: Lecture) => void;
   onOpenStudio: () => void;
+  onOpenRegistration: () => void;
 }
 
 export function HeroSection({
@@ -19,6 +20,7 @@ export function HeroSection({
   allPublishedLectures,
   onWatchLecture,
   onOpenStudio,
+  onOpenRegistration,
 }: HeroSectionProps) {
   const featuredSeries = seriesList.find((s) => s.id === featuredLecture?.seriesId);
 
@@ -46,9 +48,14 @@ export function HeroSection({
               {profile.siteSubtitle}
             </p>
           </div>
-          <p className="font-mono text-xs text-stone-500 tabular-nums shrink-0">
-            REGULAR VIDEO MONOGRAPHS &amp; LECTURE ARCHIVE
-          </p>
+          <button
+            type="button"
+            onClick={onOpenRegistration}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <ClipboardPen className="w-4 h-4" />
+            <span>강의 신청</span>
+          </button>
         </div>
 
         {/* 2-Column Exhibition Hero Split */}
@@ -109,6 +116,14 @@ export function HeroSection({
                   >
                     <BookOpen className="w-4 h-4" />
                     <span>해설 노트 보기</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenRegistration}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-[#1D3557] text-[#1D3557] bg-transparent hover:bg-[#EEF2F7] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <ClipboardPen className="w-4 h-4" />
+                    <span>강의 신청</span>
                   </button>
                 </div>
               </div>
