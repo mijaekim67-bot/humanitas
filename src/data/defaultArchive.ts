@@ -1,0 +1,391 @@
+import type { ArchiveData } from '../types/archive.ts';
+
+export const COVER_PRESETS = [
+  {
+    id: 'preset-kant',
+    label: '고전 조각과 빛의 음영',
+    url: '/src/assets/images/lecture_kant_light_1795246706973.jpg',
+  },
+  {
+    id: 'preset-monochrome',
+    label: '현대 모노크롬과 전시 공간',
+    url: '/src/assets/images/lecture_monochrome_void_1795246706794.jpg',
+  },
+  {
+    id: 'preset-ink',
+    label: '동양 산수화와 여백',
+    url: '/src/assets/images/lecture_ink_landscape_1795246708771.jpg',
+  },
+  {
+    id: 'preset-bauhaus',
+    label: '근대 건축과 조형 기하학',
+    url: '/src/assets/images/lecture_bauhaus_form_1795246708368.jpg',
+  },
+  {
+    id: 'preset-studio',
+    label: '교수 연구실과 도판 서재',
+    url: '/src/assets/images/professor_studio_desk_1795246708979.jpg',
+  },
+];
+
+export const DEFAULT_ARCHIVE: ArchiveData = {
+  profile: {
+    siteTitle: '미학 강단 아카이브',
+    siteSubtitle: '예술철학 · 조형비평 · 시각문화 정기 영상 강의실',
+    professorName: '대표 미재',
+    professorTitle: '(미학미술사학 박사)',
+    affiliation: '동탄후마니타스아카데미',
+    bio: '근대 미학의 성립부터 현대 미술의 매체 전환, 동양의 산수 미학까지 시각 예술의 철학적 토대를 연구하고 강의합니다.',
+    curatorialStatement:
+      '예술 작품을 바라보는 일은 단순한 감각적 유희를 넘어, 한 시대가 세계를 인식하고 사유하는 방식을 해독하는 작업입니다. 이 아카이브는 강단에서 나눈 미술사적 쟁점과 미학적 사유를 매주 정기적인 영상 강의와 도판 해설로 기록해 두는 열린 연구실입니다. 학생들과 연구자, 그리고 예술을 사유하고자 하는 모든 방문객이 시간과 공간의 제약 없이 사유의 궤적을 따라올 수 있도록 구성했습니다.',
+    pullQuote:
+      '“아름다움에 대한 판단은 개념을 통한 인식이 아니라, 주체의 감각과 상상력이 자유롭게 조화를 이루는 순간의 성찰이다.”',
+    email: 'professor@aesthetics-archive.kr',
+    officeHours: '매주 화·목 14:00 – 16:30 (연구실 면담 및 온라인 질의)',
+    studioImageUrl: '/src/assets/images/professor_studio_desk_1795246708979.jpg',
+    hasPasscode: false,
+    studioPasscode: '',
+  },
+  series: [
+    {
+      id: 'series-foundations',
+      code: 'AES-101',
+      title: '미학의 기초와 취미판단',
+      semester: '2026 가을학기 정규강좌',
+      description: '바움가르텐의 감성학에서 칸트의 판단력 비판에 이르는 근대 미학의 핵심 개념을 탐구합니다.',
+      order: 1,
+    },
+    {
+      id: 'series-contemporary',
+      code: 'ART-204',
+      title: '현대미술 비평과 매체론',
+      semester: '2026 가을학기 심화세미나',
+      description: '추상표현주의, 모노크롬, 개념미술을 거쳐 동시대 포스트미디엄 조건을 비평적으로 고찰합니다.',
+      order: 2,
+    },
+    {
+      id: 'series-eastern',
+      code: 'EST-302',
+      title: '동양미학: 여백과 기운생동',
+      semester: '정기 공개 특강 시리즈',
+      description: '사혁의 육법과 조선 산수화론을 중심으로 동아시아 조형 정신과 관조의 미학을 살핍니다.',
+      order: 3,
+    },
+    {
+      id: 'series-space',
+      code: 'ARC-118',
+      title: '조형과 공간의 현상학',
+      semester: '수요 아카이브 콜로키움',
+      description: '바우하우스 조형 교육부터 현대 미술관 건축에 이르기까지 빛, 재료, 공간의 미적 경험을 다룹니다.',
+      order: 4,
+    },
+  ],
+  lectures: [
+    {
+      id: 'lec-2026-01',
+      accessionCode: 'LEC-2026-01',
+      title: '칸트의 무관심적 쾌와 숭고의 미학',
+      subtitle: '『판단력 비판』 제1부 미적 판단력 분석을 중심으로',
+      seriesId: 'series-foundations',
+      status: 'published',
+      publishedAt: '2026-11-18',
+      duration: '42:15',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/lecture_kant_light_1795246706973.jpg',
+      figureCaption: '도판 1 — 고전 대리석 흉상에 비친 측광의 명암 대비와 조각적 입체감',
+      summary:
+        '임마누엘 칸트가 제시한 미적 판단의 네 가지 계기(무관심성, 주관적 보편성, 목적 없는 합목적성, 필연성)를 조각 작품의 실제 감상 경험과 연결하여 해설합니다.',
+      lectureNotes:
+        '이번 첫 번째 정기 영상 강의에서는 18세기 근대 미학의 결정적 전환점인 칸트의 『판단력 비판』을 다룹니다. 우리가 어떤 회화나 조각 앞에서 "아름답다"고 말할 때, 그 진술은 단순한 개인적 기호("좋다")와 어떻게 다른가? 칸트는 이를 해명하기 위해 대상의 실존에 대한 이해관계를 떠난 "무관심적 만족(interesseloses Wohlgefallen)"을 첫 번째 조건으로 제시합니다.\n\n강의 중반부에서는 미(Schöne)와 숭고(Erhabene)의 구조적 차이를 비교합니다. 미가 형식의 한정성 속에서 상상력과 오성의 자유로운 유희를 낳는다면, 숭고는 형식 없는 거대함이나 압도적 위력 앞에서 감성이 한계를 체험한 뒤 이성의 이념으로 도약하는 역동적 정서입니다. 영상의 마지막 장에서는 이러한 칸트적 틀이 이후 모더니즘 형식주의 비평에 어떠한 이론적 유산을 남겼는지 살펴봅니다.',
+      chapters: [
+        {
+          id: 'ch-1',
+          timestamp: '00:00',
+          title: '도입: 감각적 쾌와 미적 판단의 경계',
+          note: '오감의 쾌락과 반성적 판단력의 구별',
+        },
+        {
+          id: 'ch-2',
+          timestamp: '11:40',
+          title: '무관심성(Disinterestedness)의 진정한 의미',
+          note: '소유욕과 도덕적 선으로부터의 독립성',
+        },
+        {
+          id: 'ch-3',
+          timestamp: '24:15',
+          title: '목적 없는 합목적성과 형식의 자율성',
+          note: '자유미(pulchritudo vaga)와 부수미(pulchritudo adhaerens)',
+        },
+        {
+          id: 'ch-4',
+          timestamp: '35:10',
+          title: '수학적 숭고와 역학적 숭고의 대비',
+          note: '자연의 압도적 규모 앞에서 각성하는 내면의 이념',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-1',
+          creatorOrAuthor: 'Immanuel Kant',
+          citation: 'Kritik der Urteilskraft (판단력 비판, 제1편 미적 판단력 비판)',
+          year: '1790',
+        },
+        {
+          id: 'ref-2',
+          creatorOrAuthor: 'Clement Greenberg',
+          citation: 'Modernist Painting (모더니즘 회화)',
+          year: '1960',
+        },
+      ],
+      featured: true,
+      viewCount: 342,
+      updatedAt: '2026-11-18T09:00:00Z',
+    },
+    {
+      id: 'lec-2026-02',
+      accessionCode: 'LEC-2026-02',
+      title: '청색의 심연: 모노크롬 회화와 비재현의 감각',
+      subtitle: '이브 클랭에서 한국 단색화까지, 물질과 정신의 표면',
+      seriesId: 'series-contemporary',
+      status: 'published',
+      publishedAt: '2026-11-11',
+      duration: '36:50',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/lecture_monochrome_void_1795246706794.jpg',
+      figureCaption: '도판 2 — 전시장 벽면을 점유한 울트라마린 단색 회화와 관람자의 정적',
+      summary:
+        '재현의 의무를 벗어던진 단색 회화가 어떻게 관람자의 신체적 현존과 전시장 공간 전체를 미적 경험의 장으로 전환시키는지 분석합니다.',
+      lectureNotes:
+        '단색화(Monochrome)를 처음 마주한 관람자는 흔히 "여기에는 아무것도 그려져 있지 않다"고 말합니다. 그러나 모노크롬은 결여가 아니라 색채 자체의 순수한 현존과 물질성의 회복입니다. 이브 클랭이 순수 안료 IKB(International Klein Blue)를 통해 공간의 비물질적 감수성을 호출했다면, 1970년대 한국의 단색화는 반복적인 행위와 한지·유화의 물성을 통해 수행적 시간성을 화면에 각인했습니다.\n\n이 강의에서는 화이트 큐브라는 전시 공간의 건축적 조건 속에서 단일 색면이 어떻게 관람자의 망막과 공간 지각을 포위하는지, 그리고 왜 모노크롬이 "회화의 종말"이 아니라 "지각의 재탄생"으로 읽혀야 하는지를 논의합니다.',
+      chapters: [
+        {
+          id: 'ch-2-1',
+          timestamp: '00:00',
+          title: '환영(Illusion)에서 표면(Surface)으로',
+          note: '르네상스 원근법의 창을 닫은 평면성의 혁명',
+        },
+        {
+          id: 'ch-2-2',
+          timestamp: '14:20',
+          title: '이브 클랭의 순수 안료와 공허(Le Vide)',
+          note: '색채의 물질성과 비물질적 공간 경험',
+        },
+        {
+          id: 'ch-2-3',
+          timestamp: '26:05',
+          title: '행위와 물성: 한국 단색화의 미학적 문맥',
+          note: '무위적 반복과 재료와의 대면',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-2-1',
+          creatorOrAuthor: 'Yves Klein',
+          citation: 'Le Dépassement de la problématique de l’art',
+          year: '1959',
+        },
+        {
+          id: 'ref-2-2',
+          creatorOrAuthor: 'Rosalind Krauss',
+          citation: 'Grids & The Originality of the Avant-Garde',
+          year: '1985',
+        },
+      ],
+      featured: false,
+      viewCount: 289,
+      updatedAt: '2026-11-11T10:30:00Z',
+    },
+    {
+      id: 'lec-2026-03',
+      accessionCode: 'LEC-2026-03',
+      title: '산수화의 여백과 기운생동: 그려지지 않은 것의 힘',
+      subtitle: '사혁의 육법과 겸재 정선의 진경산수를 읽는 시선',
+      seriesId: 'series-eastern',
+      status: 'published',
+      publishedAt: '2026-11-04',
+      duration: '45:10',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/lecture_ink_landscape_1795246708771.jpg',
+      figureCaption: '도판 3 — 한지 두루마리 산수화와 청자 화병이 놓인 정갈한 문인의 서안',
+      summary:
+        '동양 회화에서 비어 있는 공간(여백)이 단순한 배경이 아니라 기운이 순환하고 상상이 호흡하는 적극적 조형 요소임을 살핍니다.',
+      lectureNotes:
+        '서양의 유화가 캔버스 전면을 물감으로 빈틈없이 채워 빛과 부피의 환영을 구축할 때, 동아시아의 수묵 산수화는 종이의 흰 바탕을 남겨둠으로써 안개와 물, 구름, 그리고 시간의 흐름을 암시합니다. 이것이 바로 "계백당흑(計白當黑)", 즉 흰 여백을 검은 먹과 동등한 형상으로 헤아리는 조형 원리입니다.\n\n본 강의에서는 남제 사혁(謝赫)이 『고화품록』에서 주창한 화육법(畫六法)의 첫 번째 강령인 "기운생동(氣韻生動)"이 형사(形似)의 재현을 넘어 어떻게 자연의 생명력과 작가의 정신적 울림을 결합하는지, 조선 후기 진경산수화 도판을 비교하며 강독합니다.',
+      chapters: [
+        {
+          id: 'ch-3-1',
+          timestamp: '00:00',
+          title: '빈 공간이 아니라 충만한 장(場): 여백의 존재론',
+          note: '노장 철학의 허(虛)와 수묵화의 공간 구성',
+        },
+        {
+          id: 'ch-3-2',
+          timestamp: '16:30',
+          title: '사혁의 화육법과 기운생동의 해석사',
+          note: '골법용필(骨法用筆)과 응물상형(應物象形)',
+        },
+        {
+          id: 'ch-3-3',
+          timestamp: '31:45',
+          title: '삼원법(三遠法)과 다중 시점의 산책',
+          note: '고원·심원·평원이 만들어내는 유동적 시선',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-3-1',
+          creatorOrAuthor: '곽희(郭熙)',
+          citation: '임천고치(林泉高致) — 산수훈(山水訓)',
+          year: '11세기',
+        },
+        {
+          id: 'ref-3-2',
+          creatorOrAuthor: '프랑수아 줄리앙',
+          citation: '대상이 없는 이미지(La Grande Image n’a pas de forme)',
+          year: '2003',
+        },
+      ],
+      featured: false,
+      viewCount: 215,
+      updatedAt: '2026-11-04T14:20:00Z',
+    },
+    {
+      id: 'lec-2026-04',
+      accessionCode: 'LEC-2026-04',
+      title: '근대 건축의 빛과 기하학: 형태는 감각을 어떻게 조직하는가',
+      subtitle: '바우하우스 조형론에서 현대 미술관 아트리움의 현상학까지',
+      seriesId: 'series-space',
+      status: 'published',
+      publishedAt: '2026-10-28',
+      duration: '39:25',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/lecture_bauhaus_form_1795246708368.jpg',
+      figureCaption: '도판 4 — 노출 콘크리트와 트라버틴 계단 위로 떨어지는 사선형 자연광',
+      summary:
+        '장식이 배제된 노출 콘크리트와 직선의 기하학 속에서 자연광의 이동이 어떻게 공간을 살아 숨 쉬는 조각적 경험으로 바꾸는지 탐구합니다.',
+      lectureNotes:
+        '우리는 흔히 근대 건축과 기능주의를 차갑고 기계적인 효율성의 산물로 오해하곤 합니다. 그러나 바이마르와 데사우의 바우하우스 기초 조형 과정(Vorkurs)은 재료의 물성과 색채, 빛의 비례를 인간의 감각 기관에 가장 명료하게 전달하기 위한 감성 교육이었습니다.\n\n모리스 메를로퐁티의 지각 현상학 관점에서 보면, 미술관의 계단을 오르는 관람자의 발걸음과 몸의 회전, 그리고 천창에서 내려오는 빛의 각도 변화가 결합될 때 비로소 건축 공간의 의미가 완성됩니다. 이번 강의에서는 안도 다다오와 루이스 칸의 미술관 사례를 통해 "빛의 침묵"을 읽어봅니다.',
+      chapters: [
+        {
+          id: 'ch-4-1',
+          timestamp: '00:00',
+          title: '바우하우스 예비과정과 재료의 본성',
+          note: '요하네스 이텐과 라즐로 모호이너지의 빛-공간 모듈레이터',
+        },
+        {
+          id: 'ch-4-2',
+          timestamp: '18:00',
+          title: '노출 콘크리트와 시간의 그림자',
+          note: '비례와 질감이 만드는 정서적 밀도',
+        },
+        {
+          id: 'ch-4-3',
+          timestamp: '30:10',
+          title: '움직이는 신체와 건축적 산책로',
+          note: '지각의 현상학으로 본 전시 공간 동선',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-4-1',
+          creatorOrAuthor: 'Maurice Merleau-Ponty',
+          citation: 'Phénoménologie de la perception (지각의 현상학)',
+          year: '1945',
+        },
+        {
+          id: 'ref-4-2',
+          creatorOrAuthor: 'Juhani Pallasmaa',
+          citation: 'The Eyes of the Skin: Architecture and the Senses',
+          year: '1996',
+        },
+      ],
+      featured: false,
+      viewCount: 178,
+      updatedAt: '2026-10-28T11:00:00Z',
+    },
+    {
+      id: 'lec-2026-05',
+      accessionCode: 'LEC-2026-05',
+      title: '발터 벤야민의 아우라: 기술복제 시대의 예술 수용',
+      subtitle: '제의가치에서 전시가치로, 사진과 영화가 바꾼 지각의 구조',
+      seriesId: 'series-contemporary',
+      status: 'published',
+      publishedAt: '2026-10-21',
+      duration: '48:00',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/professor_studio_desk_1795246708979.jpg',
+      figureCaption: '도판 5 — 미술사 원전 도록과 시네마 렌즈, 유리 슬라이드 아카이브가 놓인 연구 서안',
+      summary:
+        '오늘날 디지털 이미지와 영상 매체가 범람하는 환경 속에서, 벤야민이 1936년에 예견한 아우라의 붕괴와 새로운 지각 가능성을 재해석합니다.',
+      lectureNotes:
+        '원본이 가진 "지금 그리고 여기(Hier und Jetzt)"의 일회적 현존성, 즉 아우라(Aura)는 복제 기술의 발달과 함께 필연적으로 쇠퇴합니다. 하지만 발터 벤야민은 이를 단순한 문화적 타락으로 애도하지 않았습니다. 오히려 그는 예술이 제의적 신비주의에서 해방되어 정치적·비평적 성찰의 장으로 진입하는 가능성에 주목했습니다.\n\n오늘 이 웹 아카이브를 통해 여러분이 미술사 도판과 강의를 화면으로 만나는 현상 역시 기술복제 시대의 연장선에 있습니다. 우리는 원본과 복제, 영상 매체와 아카이브의 관계를 어떻게 사유해야 할까요?',
+      chapters: [
+        {
+          id: 'ch-5-1',
+          timestamp: '00:00',
+          title: '아우라의 정의: 먼 것의 일회적 현현',
+          note: '제의가치(Kultwert)와 전시가치(Ausstellungswert)',
+        },
+        {
+          id: 'ch-5-2',
+          timestamp: '22:30',
+          title: '시각적 무의식과 영화적 몽타주',
+          note: '클로즈업과 슬로모션이 폭로하는 현실의 새로운 층위',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-5-1',
+          creatorOrAuthor: 'Walter Benjamin',
+          citation: 'Das Kunstwerk im Zeitalter seiner technischen Reproduzierbarkeit',
+          year: '1936',
+        },
+      ],
+      featured: false,
+      viewCount: 264,
+      updatedAt: '2026-10-21T16:45:00Z',
+    },
+    {
+      id: 'lec-2026-06',
+      accessionCode: 'LEC-2026-06',
+      title: '일상 사물의 변용: 아서 단토와 예술의 종말 이후',
+      subtitle: '뒤샹의 <샘>과 워홀의 <브릴로 상자>가 던진 철학적 질문',
+      seriesId: 'series-foundations',
+      status: 'draft',
+      publishedAt: '2026-11-25',
+      duration: '40:00',
+      videoUrl: '',
+      sourceType: 'none',
+      thumbnailUrl: '/src/assets/images/lecture_monochrome_void_1795246706794.jpg',
+      figureCaption: '도판 6 — 시각적 구별 불가능성과 예술계(Artworld)의 해석적 맥락',
+      summary:
+        '눈으로 보기에 완전히 동일한 두 사물 중 왜 하나는 예술 작품이고 다른 하나는 평범한 공산품인가? 현대 분석미학의 핵심 논제를 정리합니다.',
+      lectureNotes:
+        '초안 상태의 차기 정기 강의 노트입니다. 편집 및 영상 인코딩 완료 후 게시 예정입니다.',
+      chapters: [
+        {
+          id: 'ch-6-1',
+          timestamp: '00:00',
+          title: '식별 불가능한 짝(Indiscernible Counterparts)',
+          note: '지각적 특질만으로는 예술을 정의할 수 없는 이유',
+        },
+      ],
+      references: [
+        {
+          id: 'ref-6-1',
+          creatorOrAuthor: 'Arthur C. Danto',
+          citation: 'The Transfiguration of the Commonplace (일상적인 것의 변용)',
+          year: '1981',
+        },
+      ],
+      featured: false,
+      viewCount: 0,
+      updatedAt: '2026-11-20T18:00:00Z',
+    },
+  ],
+};

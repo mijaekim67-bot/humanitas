@@ -1,0 +1,6 @@
+{
+  "name": "미학 강단 아카이브 · Aesthetica",
+  "description": "미술과 미학 강의 영상을 정기적으로 등록·게시하고 연구 자료를 아카이빙하는 교수자 전용 온라인 강의실 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
