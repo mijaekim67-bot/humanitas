@@ -48,14 +48,26 @@ export function HeroSection({
               {profile.siteSubtitle}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onOpenRegistration}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <ClipboardPen className="w-4 h-4" />
-            <span>강의 신청</span>
-          </button>
+          {profile.googleFormUrl?.trim() ? (
+            <a
+              href={profile.googleFormUrl.trim()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors duration-150 whitespace-nowrap shrink-0"
+            >
+              <ClipboardPen className="w-4 h-4" />
+              <span>강의 신청</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenRegistration}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <ClipboardPen className="w-4 h-4" />
+              <span>강의 신청</span>
+            </button>
+          )}
         </div>
 
         {/* 2-Column Exhibition Hero Split */}
@@ -117,14 +129,26 @@ export function HeroSection({
                     <BookOpen className="w-4 h-4" />
                     <span>해설 노트 보기</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={onOpenRegistration}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-[#1D3557] text-[#1D3557] bg-transparent hover:bg-[#EEF2F7] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
-                  >
-                    <ClipboardPen className="w-4 h-4" />
-                    <span>강의 신청</span>
-                  </button>
+                  {profile.googleFormUrl?.trim() ? (
+                    <a
+                      href={profile.googleFormUrl.trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-[#1D3557] text-[#1D3557] bg-transparent hover:bg-[#EEF2F7] transition-colors duration-150 whitespace-nowrap shrink-0"
+                    >
+                      <ClipboardPen className="w-4 h-4" />
+                      <span>강의 신청</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onOpenRegistration}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-[#1D3557] text-[#1D3557] bg-transparent hover:bg-[#EEF2F7] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      <ClipboardPen className="w-4 h-4" />
+                      <span>강의 신청</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

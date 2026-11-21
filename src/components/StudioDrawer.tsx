@@ -1619,6 +1619,23 @@ export function StudioDrawer({
                           className="w-full px-3 py-2 text-sm bg-white border border-stone-300"
                         />
                       </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          강의 신청 구글 폼 링크 (Google Forms URL)
+                        </label>
+                        <input
+                          type="url"
+                          value={profileForm.googleFormUrl || ''}
+                          onChange={(e) =>
+                            setProfileForm((p) => ({ ...p, googleFormUrl: e.target.value }))
+                          }
+                          placeholder="https://forms.gle/..."
+                          className="w-full px-3 py-2 text-xs font-mono bg-white border border-stone-300"
+                        />
+                        <p className="mt-1 text-[11px] text-stone-500">
+                          입력 시 첫 화면의 「강의 신청」 단추를 누르면 해당 구글 폼으로 바로 이동합니다. 비워두면 내장 신청서 창이 열립니다.
+                        </p>
+                      </div>
                       <div className="sm:col-span-2 pt-3 border-t border-stone-200">
                         <label className="block text-xs font-medium text-stone-700 mb-1">
                           스튜디오 잠금 비밀번호 설정 (선택 사항)

@@ -43,6 +43,7 @@ export const DEFAULT_ARCHIVE: ArchiveData = {
     email: 'professor@aesthetics-archive.kr',
     officeHours: '매주 화·목 14:00 – 16:30 (연구실 면담 및 온라인 질의)',
     studioImageUrl: '/src/assets/images/professor_studio_desk_1795246708979.jpg',
+    googleFormUrl: 'https://forms.gle/MkMWAUvyGchBHw4f6',
     googleSheetUrl: '',
     googleSheetWebhookUrl: '',
     hasPasscode: false,

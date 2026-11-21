@@ -329,13 +329,24 @@ export default function App() {
             <a href="#index" className="hover:text-[#161616] transition-colors">
               아카이브 색인
             </a>
-            <button
-              type="button"
-              onClick={() => setRegistrationOpen(true)}
-              className="hover:text-[#161616] transition-colors cursor-pointer"
-            >
-              강의 신청
-            </button>
+            {archive.profile.googleFormUrl?.trim() ? (
+              <a
+                href={archive.profile.googleFormUrl.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#161616] transition-colors"
+              >
+                강의 신청
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRegistrationOpen(true)}
+                className="hover:text-[#161616] transition-colors cursor-pointer"
+              >
+                강의 신청
+              </button>
+            )}
             <button
               type="button"
               onClick={() => openStudioAt('applications', null)}

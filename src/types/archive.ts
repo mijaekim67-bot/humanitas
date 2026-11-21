@@ -73,6 +73,7 @@ export interface ProfessorProfile {
   email: string;
   officeHours: string;
   studioImageUrl: string;
+  googleFormUrl?: string;
   googleSheetUrl?: string;
   googleSheetWebhookUrl?: string;
   hasPasscode?: boolean;
