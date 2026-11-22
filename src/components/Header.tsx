@@ -12,6 +12,7 @@ export function Header({ siteTitle, onOpenStudio }: HeaderProps) {
   const navItems = [
     { href: '#featured', label: '주요 강의' },
     { href: '#catalog', label: '정기 강좌' },
+    { href: '#columns', label: '인문학 산책' },
     { href: '#index', label: '아카이브 색인' },
     { href: '#about', label: '연구실 소개' },
   ];

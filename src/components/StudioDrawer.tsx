@@ -17,10 +17,12 @@ import {
   Copy,
   ExternalLink,
   RefreshCw,
+  Newspaper,
 } from 'lucide-react';
 import type {
   ApplicationStatus,
   ArchiveData,
+  ColumnArticle,
   Lecture,
   LectureApplication,
   LectureChapter,
@@ -32,7 +34,7 @@ import type {
 import { COVER_PRESETS } from '../data/defaultArchive.ts';
 import { formatKoreanDate, parseVideoUrl } from '../utils/video.ts';
 
-export type StudioTab = 'editor' | 'lectures' | 'series' | 'applications' | 'settings';
+export type StudioTab = 'editor' | 'lectures' | 'series' | 'columns' | 'applications' | 'settings';
 
 const APPS_SCRIPT_SNIPPET = `function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -49,6 +51,7 @@ interface StudioDrawerProps {
   isOpen: boolean;
   initialTab: StudioTab;
   editingLecture: Lecture | null;
+  editingColumn: ColumnArticle | null;
   archive: ArchiveData;
   applications: LectureApplication[];
   passcodeHeader: string;
@@ -58,6 +61,8 @@ interface StudioDrawerProps {
   onDeleteLecture: (id: string) => Promise<void>;
   onSaveSeries: (series: Partial<LectureSeries>, isNew: boolean) => Promise<void>;
   onDeleteSeries: (id: string) => Promise<void>;
+  onSaveColumn: (column: Partial<ColumnArticle>, isNew: boolean) => Promise<void>;
+  onDeleteColumn: (id: string) => Promise<void>;
   onSaveProfile: (profile: Partial<ProfessorProfile>) => Promise<void>;
   onImportArchive: (data: ArchiveData) => Promise<void>;
   onFetchApplications: () => Promise<void>;
@@ -66,6 +71,7 @@ interface StudioDrawerProps {
   onSyncApplicationsToSheet: () => Promise<number>;
   onEditSelect: (lecture: Lecture) => void;
   onClearEditing: () => void;
+  onClearEditingColumn: () => void;
 }
 
 function createEmptyLecture(seriesList: LectureSeries[], count: number): Partial<Lecture> {
@@ -96,6 +102,7 @@ export function StudioDrawer({
   isOpen,
   initialTab,
   editingLecture,
+  editingColumn,
   archive,
   applications,
   passcodeHeader,
@@ -105,6 +112,8 @@ export function StudioDrawer({
   onDeleteLecture,
   onSaveSeries,
   onDeleteSeries,
+  onSaveColumn,
+  onDeleteColumn,
   onSaveProfile,
   onImportArchive,
   onFetchApplications,
@@ -113,6 +122,7 @@ export function StudioDrawer({
   onSyncApplicationsToSheet,
   onEditSelect,
   onClearEditing,
+  onClearEditingColumn,
 }: StudioDrawerProps) {
   const [activeTab, setActiveTab] = useState<StudioTab>(initialTab);
   const [unlocked, setUnlocked] = useState(false);
@@ -136,6 +146,29 @@ export function StudioDrawer({
     description: '',
   });
   const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
+
+  // Column Form State
+  const createEmptyColumn = (): Partial<ColumnArticle> => {
+    const nextNum = (archive.columns?.length ?? 0) + 1;
+    return {
+      issueNumber: `제${nextNum}회`,
+      seriesTitle: `미재의 미술인문학산책 | 길 위에서 마음을 묻다`,
+      publication: '따옴뉴스',
+      publishedAt: new Date().toISOString().slice(0, 10),
+      title: '',
+      subtitle: '',
+      summary: '',
+      body: '',
+      sidebarTitle: '',
+      sidebarBody: '',
+      coverImageUrl: COVER_PRESETS[3].url,
+      figureCaption: '',
+      pdfUrl: '',
+      status: 'published',
+    };
+  };
+  const [columnForm, setColumnForm] = useState<Partial<ColumnArticle>>(createEmptyColumn);
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(editingColumn?.id ?? null);
 
   // Profile Form State
   const [profileForm, setProfileForm] = useState<ProfessorProfile>(archive.profile);
@@ -169,6 +202,17 @@ export function StudioDrawer({
   }, [editingLecture, archive.series, archive.lectures.length]);
 
   useEffect(() => {
+    if (editingColumn) {
+      setEditingColumnId(editingColumn.id);
+      setColumnForm({ ...editingColumn });
+      setActiveTab('columns');
+    } else {
+      setEditingColumnId(null);
+      setColumnForm(createEmptyColumn());
+    }
+  }, [editingColumn, archive.columns?.length]);
+
+  useEffect(() => {
     setProfileForm(archive.profile);
   }, [archive.profile]);
 
@@ -198,10 +242,15 @@ export function StudioDrawer({
     }
   };
 
-  const handleFileUpload = async (file: File, target: 'video' | 'thumbnail') => {
+  const handleFileUpload = async (
+    file: File,
+    target: 'video' | 'thumbnail' | 'column-cover' | 'column-pdf'
+  ) => {
     setUploadProgress(
       target === 'video'
         ? `영상 파일 업로드 중 (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`
+        : target === 'column-pdf'
+        ? '신문 지면 PDF 업로드 중...'
         : '커버 이미지 업로드 중...'
     );
     setFeedback(null);
@@ -229,15 +278,30 @@ export function StudioDrawer({
           videoUrl: data.url,
           sourceType: 'upload',
         }));
-      } else {
+      } else if (target === 'thumbnail') {
         setForm((prev) => ({
           ...prev,
           thumbnailUrl: data.url,
         }));
+      } else if (target === 'column-cover') {
+        setColumnForm((prev) => ({
+          ...prev,
+          coverImageUrl: data.url,
+        }));
+      } else {
+        setColumnForm((prev) => ({
+          ...prev,
+          pdfUrl: data.url,
+        }));
       }
       setFeedback({
         type: 'ok',
-        text: target === 'video' ? '영상 파일이 서버에 업로드되었습니다.' : '커버 이미지가 업로드되었습니다.',
+        text:
+          target === 'video'
+            ? '영상 파일이 서버에 업로드되었습니다.'
+            : target === 'column-pdf'
+            ? 'PDF 파일이 서버에 업로드되었습니다.'
+            : '커버 이미지가 업로드되었습니다.',
       });
     } catch (err) {
       setFeedback({
@@ -352,6 +416,34 @@ export function StudioDrawer({
       setFeedback({ type: 'ok', text: '강좌 시리즈가 저장되었습니다.' });
     } catch (err) {
       setFeedback({ type: 'err', text: err instanceof Error ? err.message : '시리즈 저장 실패' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveColumnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!columnForm.title?.trim()) {
+      setFeedback({ type: 'err', text: '원고 제목을 입력해 주세요.' });
+      return;
+    }
+    setIsSaving(true);
+    setFeedback(null);
+    try {
+      const isNew = !editingColumnId;
+      await onSaveColumn(
+        editingColumnId ? { ...columnForm, id: editingColumnId } : columnForm,
+        isNew
+      );
+      setFeedback({
+        type: 'ok',
+        text: isNew ? '새 기고 원고가 아카이브에 등록되었습니다.' : '기고 원고가 수정되었습니다.',
+      });
+      if (isNew) {
+        setColumnForm(createEmptyColumn());
+      }
+    } catch (err) {
+      setFeedback({ type: 'err', text: err instanceof Error ? err.message : '원고 저장 실패' });
     } finally {
       setIsSaving(false);
     }
@@ -514,6 +606,21 @@ export function StudioDrawer({
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 <span>강좌 시리즈 ({archive.series.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('columns');
+                  setFeedback(null);
+                }}
+                className={`inline-flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  activeTab === 'columns'
+                    ? 'border-[#1D3557] text-[#1D3557]'
+                    : 'border-transparent text-stone-600 hover:text-[#161616]'
+                }`}
+              >
+                <Newspaper className="w-3.5 h-3.5" />
+                <span>기고 칼럼 ({archive.columns?.length ?? 0})</span>
               </button>
               <button
                 type="button"
@@ -1206,7 +1313,304 @@ export function StudioDrawer({
                 </div>
               )}
 
-              {/* TAB 4: APPLICATIONS & GOOGLE SHEETS */}
+              {/* TAB 4: COLUMNS ("미재의 미술인문학산책") */}
+              {activeTab === 'columns' && (
+                <div className="space-y-8 max-w-3xl">
+                  <form
+                    onSubmit={handleSaveColumnSubmit}
+                    className="p-5 border border-stone-200 bg-white space-y-4"
+                  >
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-stone-200">
+                      <div>
+                        <h3 className="font-serif text-lg font-semibold text-[#161616]">
+                          {editingColumnId
+                            ? `기고 원고 수정 (${columnForm.issueNumber || '편집 중'})`
+                            : '따옴뉴스 월간 기고 원고 등록'}
+                        </h3>
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          매달 연재하는 「미재의 미술인문학산책 | 길 위에서 마음을 묻다」 원고와 신문 PDF를 등록합니다.
+                        </p>
+                      </div>
+                      {editingColumnId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingColumnId(null);
+                            onClearEditingColumn();
+                            setColumnForm(createEmptyColumn());
+                          }}
+                          className="text-xs text-[#1D3557] hover:underline cursor-pointer shrink-0"
+                        >
+                          + 새 원고 등록으로 전환
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          회차
+                        </label>
+                        <input
+                          type="text"
+                          value={columnForm.issueNumber || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, issueNumber: e.target.value }))
+                          }
+                          placeholder="제5회"
+                          className="w-full px-3 py-2 text-xs font-mono border border-stone-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          게재 매체·지면
+                        </label>
+                        <input
+                          type="text"
+                          value={columnForm.publication || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, publication: e.target.value }))
+                          }
+                          placeholder="따옴뉴스 · 제16면"
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          게재일
+                        </label>
+                        <input
+                          type="date"
+                          value={columnForm.publishedAt || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, publishedAt: e.target.value }))
+                          }
+                          className="w-full px-3 py-2 text-xs font-mono border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          연재 타이틀
+                        </label>
+                        <input
+                          type="text"
+                          value={columnForm.seriesTitle || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, seriesTitle: e.target.value }))
+                          }
+                          placeholder="미재의 미술인문학산책 | 길 위에서 마음을 묻다 ⑤"
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          기사 제목 *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={columnForm.title || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, title: e.target.value }))
+                          }
+                          placeholder="기사 본제목을 입력하세요"
+                          className="w-full px-3 py-2 text-sm border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          부제 (리드 문장)
+                        </label>
+                        <input
+                          type="text"
+                          value={columnForm.subtitle || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, subtitle: e.target.value }))
+                          }
+                          placeholder="기사 부제를 입력하세요"
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          요약 (목록 표시용)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={columnForm.summary || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, summary: e.target.value }))
+                          }
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          원고 본문
+                        </label>
+                        <textarea
+                          rows={8}
+                          value={columnForm.body || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, body: e.target.value }))
+                          }
+                          placeholder="문단 사이는 빈 줄(Enter 두 번)로 구분하세요."
+                          className="w-full px-3 py-2 text-xs border border-stone-300 leading-relaxed"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          보조 박스 제목 (선택 — 예: 인물·건축가 해설)
+                        </label>
+                        <input
+                          type="text"
+                          value={columnForm.sidebarTitle || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, sidebarTitle: e.target.value }))
+                          }
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-stone-700 mb-1">
+                          보조 박스 내용 (선택)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={columnForm.sidebarBody || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, sidebarBody: e.target.value }))
+                          }
+                          className="w-full px-3 py-2 text-xs border border-stone-300"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-stone-200">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-stone-700">대표 사진</span>
+                          <label className="text-[11px] text-[#1D3557] hover:underline cursor-pointer">
+                            사진 업로드
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleFileUpload(file, 'column-cover');
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={columnForm.coverImageUrl || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, coverImageUrl: e.target.value }))
+                          }
+                          placeholder="/src/assets/images/..."
+                          className="w-full px-3 py-2 text-xs font-mono border border-stone-300"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-stone-700">신문 지면 PDF</span>
+                          <label className="text-[11px] text-[#1D3557] hover:underline cursor-pointer">
+                            PDF 업로드
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              className="sr-only"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleFileUpload(file, 'column-pdf');
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={columnForm.pdfUrl || ''}
+                          onChange={(e) =>
+                            setColumnForm((p) => ({ ...p, pdfUrl: e.target.value }))
+                          }
+                          placeholder="/uploads/..."
+                          className="w-full px-3 py-2 text-xs font-mono border border-stone-300"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <select
+                        value={columnForm.status || 'published'}
+                        onChange={(e) =>
+                          setColumnForm((p) => ({
+                            ...p,
+                            status: e.target.value as 'published' | 'draft',
+                          }))
+                        }
+                        className="px-3 py-2 text-xs border border-stone-300 bg-white"
+                      >
+                        <option value="published">공개 게시</option>
+                        <option value="draft">비공개 초안</option>
+                      </select>
+                      <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="px-5 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] cursor-pointer"
+                      >
+                        {editingColumnId ? '원고 수정 저장' : '기고 원고 게시하기'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Existing Columns List */}
+                  <div className="divide-y divide-stone-200 border border-stone-200 bg-white">
+                    {(archive.columns ?? []).map((col) => (
+                      <div key={col.id} className="p-4 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-mono text-[11px] text-stone-500 tabular-nums">
+                            {col.issueNumber} · {col.publication} · {formatKoreanDate(col.publishedAt)}
+                          </p>
+                          <h4 className="font-serif text-base font-semibold text-[#161616] truncate mt-0.5">
+                            {col.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingColumnId(col.id);
+                              setColumnForm({ ...col });
+                            }}
+                            className="px-2.5 py-1 text-xs border border-stone-300 hover:bg-[#EFECE5] cursor-pointer"
+                          >
+                            불러와 수정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editingColumnId === col.id) {
+                                setEditingColumnId(null);
+                                onClearEditingColumn();
+                                setColumnForm(createEmptyColumn());
+                              }
+                              void onDeleteColumn(col.id);
+                            }}
+                            aria-label="원고 삭제"
+                            className="p-1.5 text-stone-400 hover:text-red-700 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: APPLICATIONS & GOOGLE SHEETS */}
               {activeTab === 'applications' && (
                 <div className="space-y-8">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">

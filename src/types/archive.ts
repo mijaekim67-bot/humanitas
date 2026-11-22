@@ -80,9 +80,29 @@ export interface ProfessorProfile {
   studioPasscode?: string;
 }
 
+export interface ColumnArticle {
+  id: string;
+  issueNumber: string;
+  seriesTitle: string;
+  publication: string;
+  publishedAt: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  body: string;
+  sidebarTitle?: string;
+  sidebarBody?: string;
+  coverImageUrl: string;
+  figureCaption?: string;
+  pdfUrl?: string;
+  status: 'published' | 'draft';
+  updatedAt: string;
+}
+
 export interface ArchiveData {
   profile: ProfessorProfile;
   series: LectureSeries[];
   lectures: Lecture[];
+  columns?: ColumnArticle[];
   applications?: LectureApplication[];
 }

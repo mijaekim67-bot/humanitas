@@ -3,6 +3,7 @@ import { DEFAULT_ARCHIVE } from './data/defaultArchive.ts';
 import type {
   ApplicationStatus,
   ArchiveData,
+  ColumnArticle,
   Lecture,
   LectureApplication,
   LectureSeries,
@@ -11,9 +12,11 @@ import type {
 import { Header } from './components/Header.tsx';
 import { HeroSection } from './components/HeroSection.tsx';
 import { LectureCatalog } from './components/LectureCatalog.tsx';
+import { ColumnSection } from './components/ColumnSection.tsx';
 import { ArchiveIndexTable } from './components/ArchiveIndexTable.tsx';
 import { ProfessorAboutSection } from './components/ProfessorAboutSection.tsx';
 import { ScreeningModal } from './components/ScreeningModal.tsx';
+import { ColumnReaderModal } from './components/ColumnReaderModal.tsx';
 import { RegistrationModal } from './components/RegistrationModal.tsx';
 import { StudioDrawer, type StudioTab } from './components/StudioDrawer.tsx';
 
@@ -24,10 +27,12 @@ export default function App() {
 
   const [selectedSeriesId, setSelectedSeriesId] = useState<string>('all');
   const [watchingLecture, setWatchingLecture] = useState<Lecture | null>(null);
+  const [readingColumn, setReadingColumn] = useState<ColumnArticle | null>(null);
 
   const [studioOpen, setStudioOpen] = useState<boolean>(false);
   const [studioTab, setStudioTab] = useState<StudioTab>('editor');
   const [editingLecture, setEditingLecture] = useState<Lecture | null>(null);
+  const [editingColumn, setEditingColumn] = useState<ColumnArticle | null>(null);
   const [passcodeHeader, setPasscodeHeader] = useState<string>('');
   const [registrationOpen, setRegistrationOpen] = useState<boolean>(false);
   const [applications, setApplications] = useState<LectureApplication[]>([]);
@@ -91,7 +96,17 @@ export default function App() {
 
   const openStudioAt = (tab: StudioTab, lectureToEdit: Lecture | null = null) => {
     setEditingLecture(lectureToEdit);
+    if (tab !== 'columns') {
+      setEditingColumn(null);
+    }
     setStudioTab(tab);
+    setStudioOpen(true);
+  };
+
+  const openStudioAtColumn = (columnToEdit: ColumnArticle | null = null) => {
+    setEditingLecture(null);
+    setEditingColumn(columnToEdit);
+    setStudioTab('columns');
     setStudioOpen(true);
   };
 
@@ -166,6 +181,41 @@ export default function App() {
     setArchive(data.archive);
     if (selectedSeriesId === id) {
       setSelectedSeriesId('all');
+    }
+  };
+
+  const handleSaveColumn = async (column: Partial<ColumnArticle>, isNew: boolean) => {
+    const url = isNew ? '/api/columns' : `/api/columns/${column.id}`;
+    const method = isNew ? 'POST' : 'PUT';
+    const res = await fetch(url, {
+      method,
+      headers: authHeaders(),
+      body: JSON.stringify(column),
+    });
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(err.error || '기고 원고를 저장하지 못했습니다.');
+    }
+    const data = (await res.json()) as { column: ColumnArticle; archive: ArchiveData };
+    setArchive(data.archive);
+    if (!isNew) {
+      setEditingColumn(data.column);
+    }
+  };
+
+  const handleDeleteColumn = async (id: string) => {
+    const res = await fetch(`/api/columns/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(err.error || '기고 원고를 삭제하지 못했습니다.');
+    }
+    const data = (await res.json()) as { archive: ArchiveData };
+    setArchive(data.archive);
+    if (editingColumn?.id === id) {
+      setEditingColumn(null);
     }
   };
 
@@ -294,6 +344,13 @@ export default function App() {
               onEditLecture={(lec) => openStudioAt('editor', lec)}
             />
 
+            <ColumnSection
+              columns={archive.columns ?? []}
+              onReadColumn={(col) => setReadingColumn(col)}
+              onAddColumn={() => openStudioAtColumn(null)}
+              onEditColumn={(col) => openStudioAtColumn(col)}
+            />
+
             <ArchiveIndexTable
               lectures={archive.lectures}
               seriesList={archive.series}
@@ -325,6 +382,9 @@ export default function App() {
             </a>
             <a href="#catalog" className="hover:text-[#161616] transition-colors">
               정기 강좌
+            </a>
+            <a href="#columns" className="hover:text-[#161616] transition-colors">
+              인문학 산책
             </a>
             <a href="#index" className="hover:text-[#161616] transition-colors">
               아카이브 색인
@@ -372,6 +432,12 @@ export default function App() {
         onEditLecture={(lec) => openStudioAt('editor', lec)}
       />
 
+      <ColumnReaderModal
+        column={readingColumn}
+        onClose={() => setReadingColumn(null)}
+        onEditColumn={(col) => openStudioAtColumn(col)}
+      />
+
       <RegistrationModal
         isOpen={registrationOpen}
         lectures={archive.lectures}
@@ -385,6 +451,7 @@ export default function App() {
         isOpen={studioOpen}
         initialTab={studioTab}
         editingLecture={editingLecture}
+        editingColumn={editingColumn}
         archive={archive}
         applications={applications}
         passcodeHeader={passcodeHeader}
@@ -394,6 +461,8 @@ export default function App() {
         onDeleteLecture={handleDeleteLecture}
         onSaveSeries={handleSaveSeries}
         onDeleteSeries={handleDeleteSeries}
+        onSaveColumn={handleSaveColumn}
+        onDeleteColumn={handleDeleteColumn}
         onSaveProfile={handleSaveProfile}
         onImportArchive={handleImportArchive}
         onFetchApplications={handleFetchApplications}
@@ -402,6 +471,7 @@ export default function App() {
         onSyncApplicationsToSheet={handleSyncApplicationsToSheet}
         onEditSelect={(lec) => openStudioAt('editor', lec)}
         onClearEditing={() => setEditingLecture(null)}
+        onClearEditingColumn={() => setEditingColumn(null)}
       />
     </div>
   );

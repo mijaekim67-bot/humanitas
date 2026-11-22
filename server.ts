@@ -7,6 +7,7 @@ import { DEFAULT_ARCHIVE } from './src/data/defaultArchive.ts';
 import type {
   ApplicationStatus,
   ArchiveData,
+  ColumnArticle,
   Lecture,
   LectureApplication,
   LectureSeries,
@@ -43,6 +44,9 @@ function readArchive(): ArchiveData {
     }
     return {
       ...parsed,
+      columns: Array.isArray(parsed.columns)
+        ? parsed.columns
+        : structuredClone(DEFAULT_ARCHIVE.columns ?? []),
       applications: Array.isArray(parsed.applications) ? parsed.applications : [],
     };
   } catch {
@@ -65,6 +69,7 @@ function sanitizePublicArchive(data: ArchiveData): ArchiveData {
     },
     series: data.series,
     lectures: data.lectures,
+    columns: data.columns ?? [],
   };
 }
 
@@ -123,10 +128,13 @@ async function startServer(): Promise<void> {
 
   app.use('/uploads', express.static(UPLOADS_DIR));
 
-  // Raw file upload endpoint for lecture videos & custom thumbnails
+  // Raw file upload endpoint for lecture videos, thumbnails, and column PDFs
   app.post(
     '/api/upload',
-    express.raw({ type: ['video/*', 'image/*', 'application/octet-stream'], limit: '150mb' }),
+    express.raw({
+      type: ['video/*', 'image/*', 'application/pdf', 'application/octet-stream'],
+      limit: '150mb',
+    }),
     (req, res) => {
       const archive = readArchive();
       if (!checkPasscode(req, archive)) {
@@ -330,6 +338,86 @@ async function startServer(): Promise<void> {
     }
 
     archive.series = archive.series.filter((s) => s.id !== req.params.id);
+    writeArchive(archive);
+    res.json({ ok: true, archive: sanitizePublicArchive(archive) });
+  });
+
+  // Columns ("미재의 미술인문학산책 | 길 위에서 마음을 묻다") CRUD
+  app.post('/api/columns', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+
+    const incoming = req.body as Partial<ColumnArticle>;
+    if (!incoming.title?.trim()) {
+      res.status(400).json({ error: '원고 제목을 입력해 주세요.' });
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const columns = archive.columns ?? [];
+    const newCol: ColumnArticle = {
+      id: incoming.id?.trim() || `col-${Date.now()}`,
+      issueNumber: incoming.issueNumber?.trim() || `제${columns.length + 1}회`,
+      seriesTitle:
+        incoming.seriesTitle?.trim() || '미재의 미술인문학산책 | 길 위에서 마음을 묻다',
+      publication: incoming.publication?.trim() || '따옴뉴스',
+      publishedAt: incoming.publishedAt || nowIso.slice(0, 10),
+      title: incoming.title.trim(),
+      subtitle: incoming.subtitle?.trim() || '',
+      summary: incoming.summary?.trim() || '',
+      body: incoming.body?.trim() || '',
+      sidebarTitle: incoming.sidebarTitle?.trim() || '',
+      sidebarBody: incoming.sidebarBody?.trim() || '',
+      coverImageUrl:
+        incoming.coverImageUrl?.trim() ||
+        '/src/assets/images/lecture_bauhaus_form_1795246708368.jpg',
+      figureCaption: incoming.figureCaption?.trim() || '',
+      pdfUrl: incoming.pdfUrl?.trim() || '',
+      status: incoming.status || 'published',
+      updatedAt: nowIso,
+    };
+
+    archive.columns = [newCol, ...columns];
+    writeArchive(archive);
+    res.status(201).json({ column: newCol, archive: sanitizePublicArchive(archive) });
+  });
+
+  app.put('/api/columns/:id', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+
+    const columns = archive.columns ?? [];
+    const idx = columns.findIndex((c) => c.id === req.params.id);
+    if (idx === -1) {
+      res.status(404).json({ error: '원고를 찾을 수 없습니다.' });
+      return;
+    }
+
+    columns[idx] = {
+      ...columns[idx],
+      ...(req.body as Partial<ColumnArticle>),
+      id: req.params.id,
+      updatedAt: new Date().toISOString(),
+    };
+    archive.columns = columns;
+    writeArchive(archive);
+    res.json({ column: columns[idx], archive: sanitizePublicArchive(archive) });
+  });
+
+  app.delete('/api/columns/:id', (req, res) => {
+    const archive = readArchive();
+    if (!checkPasscode(req, archive)) {
+      res.status(401).json({ error: '스튜디오 인증이 필요합니다.' });
+      return;
+    }
+
+    archive.columns = (archive.columns ?? []).filter((c) => c.id !== req.params.id);
     writeArchive(archive);
     res.json({ ok: true, archive: sanitizePublicArchive(archive) });
   });
