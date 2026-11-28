@@ -8,6 +8,7 @@ interface HeroSectionProps {
   featuredLecture: Lecture | undefined;
   seriesList: LectureSeries[];
   allPublishedLectures: Lecture[];
+  isAdmin: boolean;
   onWatchLecture: (lecture: Lecture) => void;
   onOpenStudio: () => void;
   onOpenRegistration: () => void;
@@ -18,6 +19,7 @@ export function HeroSection({
   featuredLecture,
   seriesList,
   allPublishedLectures,
+  isAdmin,
   onWatchLecture,
   onOpenStudio,
   onOpenRegistration,
@@ -196,15 +198,19 @@ export function HeroSection({
               아직 게시된 강의 영상이 없습니다
             </h1>
             <p className="mt-3 text-sm text-stone-600">
-              교수자 스튜디오에서 첫 번째 미술·미학 강의를 등록하고 공개해 보세요.
+              {isAdmin
+                ? '교수자 스튜디오에서 첫 번째 미술·미학 강의를 등록하고 공개해 보세요.'
+                : '곧 새로운 미술·미학 정규 영상 강의가 공개될 예정입니다.'}
             </p>
-            <button
-              type="button"
-              onClick={onOpenStudio}
-              className="mt-6 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors cursor-pointer"
-            >
-              첫 강의 등록하기
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onOpenStudio}
+                className="mt-6 px-5 py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors cursor-pointer"
+              >
+                첫 강의 등록하기
+              </button>
+            )}
           </div>
         )}
 

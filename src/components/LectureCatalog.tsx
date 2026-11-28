@@ -8,6 +8,7 @@ interface LectureCatalogProps {
   lectures: Lecture[];
   seriesList: LectureSeries[];
   selectedSeriesId: string;
+  isAdmin: boolean;
   onSelectSeries: (id: string) => void;
   onWatchLecture: (lecture: Lecture) => void;
   onEditLecture: (lecture: Lecture) => void;
@@ -19,6 +20,7 @@ export function LectureCatalog({
   lectures,
   seriesList,
   selectedSeriesId,
+  isAdmin,
   onSelectSeries,
   onWatchLecture,
   onEditLecture,
@@ -216,15 +218,17 @@ export function LectureCatalog({
                       {formatKoreanDate(lecture.publishedAt)} · {lecture.chapters.length}개 장
                     </span>
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => onEditLecture(lecture)}
-                        className="inline-flex items-center gap-1 text-stone-500 hover:text-[#161616] transition-colors cursor-pointer"
-                        title="강의 정보 수정"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        <span>편집</span>
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => onEditLecture(lecture)}
+                          className="inline-flex items-center gap-1 text-stone-500 hover:text-[#161616] transition-colors cursor-pointer"
+                          title="강의 정보 수정"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>편집</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onWatchLecture(lecture)}

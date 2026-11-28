@@ -5,6 +5,7 @@ import { ArtFrame } from './ArtFrame.tsx';
 
 interface ColumnSectionProps {
   columns: ColumnArticle[];
+  isAdmin: boolean;
   onReadColumn: (column: ColumnArticle) => void;
   onAddColumn: () => void;
   onEditColumn: (column: ColumnArticle) => void;
@@ -12,6 +13,7 @@ interface ColumnSectionProps {
 
 export function ColumnSection({
   columns,
+  isAdmin,
   onReadColumn,
   onAddColumn,
   onEditColumn,
@@ -39,14 +41,16 @@ export function ColumnSection({
               매달 1회 따옴뉴스에 연재하는 미술·건축·인문학 기고 원고와 지면 PDF 아카이브입니다.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onAddColumn}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium border border-stone-300 bg-white text-[#161616] hover:bg-[#F3EFE6] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>새 기고 원고 등록</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={onAddColumn}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium border border-stone-300 bg-white text-[#161616] hover:bg-[#F3EFE6] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>새 기고 원고 등록</span>
+            </button>
+          )}
         </div>
 
         {/* Lead Broadsheet Column */}
@@ -55,13 +59,15 @@ export function ColumnSection({
             <p className="font-serif text-xl text-stone-700">
               아직 공개된 기고 원고가 없습니다.
             </p>
-            <button
-              type="button"
-              onClick={onAddColumn}
-              className="mt-4 px-4 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] cursor-pointer"
-            >
-              첫 원고 등록하기
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onAddColumn}
+                className="mt-4 px-4 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] cursor-pointer"
+              >
+                첫 원고 등록하기
+              </button>
+            )}
           </div>
         ) : (
           <article className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch pb-10 border-b border-stone-200">
@@ -144,14 +150,16 @@ export function ColumnSection({
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => onEditColumn(lead)}
-                  className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>원고 수정</span>
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => onEditColumn(lead)}
+                    className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>원고 수정</span>
+                  </button>
+                )}
               </div>
             </div>
           </article>
@@ -205,13 +213,15 @@ export function ColumnSection({
                   >
                     전문 읽기
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onEditColumn(col)}
-                    className="text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
-                  >
-                    수정
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => onEditColumn(col)}
+                      className="text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
+                    >
+                      수정
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

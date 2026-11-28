@@ -4,11 +4,13 @@ import { ArtFrame } from './ArtFrame.tsx';
 
 interface ProfessorAboutSectionProps {
   profile: ProfessorProfile;
+  isAdmin: boolean;
   onOpenSettings: () => void;
 }
 
 export function ProfessorAboutSection({
   profile,
+  isAdmin,
   onOpenSettings,
 }: ProfessorAboutSectionProps) {
   return (
@@ -84,15 +86,17 @@ export function ProfessorAboutSection({
                 </div>
               </dl>
 
-              <div className="pt-4 border-t border-stone-200">
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="text-xs font-medium text-[#1D3557] hover:underline underline-offset-4 cursor-pointer"
-                >
-                  교수자 정보 및 웹사이트 틀 수정하기
-                </button>
-              </div>
+              {isAdmin && (
+                <div className="pt-4 border-t border-stone-200">
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="text-xs font-medium text-[#1D3557] hover:underline underline-offset-4 cursor-pointer"
+                  >
+                    교수자 정보 및 웹사이트 틀 수정하기
+                  </button>
+                </div>
+              )}
             </div>
           </aside>
         </div>

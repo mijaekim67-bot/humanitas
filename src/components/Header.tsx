@@ -3,17 +3,24 @@ import { Menu, X } from 'lucide-react';
 
 interface HeaderProps {
   siteTitle: string;
+  isAdmin: boolean;
   onOpenStudio: () => void;
+  onOpenAdminLogin: () => void;
 }
 
-export function Header({ siteTitle, onOpenStudio }: HeaderProps) {
+export function Header({
+  siteTitle,
+  isAdmin,
+  onOpenStudio,
+  onOpenAdminLogin,
+}: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
     { href: '#featured', label: '주요 강의' },
+    { href: '#board', label: '자료 게시판' },
     { href: '#catalog', label: '정기 강좌' },
     { href: '#columns', label: '인문학 산책' },
-    { href: '#index', label: '아카이브 색인' },
     { href: '#about', label: '연구실 소개' },
   ];
 
@@ -28,7 +35,7 @@ export function Header({ siteTitle, onOpenStudio }: HeaderProps) {
           {siteTitle}
         </a>
 
-        {/* Zone 2: 4 concise single-line nav links */}
+        {/* Zone 2: 5 concise single-line nav links */}
         <nav
           aria-label="주요 메뉴"
           className="hidden md:flex items-center gap-7 text-sm font-medium text-stone-600"
@@ -48,10 +55,10 @@ export function Header({ siteTitle, onOpenStudio }: HeaderProps) {
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={onOpenStudio}
+            onClick={isAdmin ? onOpenStudio : onOpenAdminLogin}
             className="px-4 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D3557]"
           >
-            강의 등록
+            {isAdmin ? '스튜디오 관리' : '관리자 모드'}
           </button>
           <button
             type="button"

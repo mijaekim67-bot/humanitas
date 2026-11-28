@@ -6,12 +6,14 @@ import { ArtFrame } from './ArtFrame.tsx';
 
 interface ColumnReaderModalProps {
   column: ColumnArticle | null;
+  isAdmin: boolean;
   onClose: () => void;
   onEditColumn: (column: ColumnArticle) => void;
 }
 
 export function ColumnReaderModal({
   column,
+  isAdmin,
   onClose,
   onEditColumn,
 }: ColumnReaderModalProps) {
@@ -64,17 +66,19 @@ export function ColumnReaderModal({
                 <span>신문 PDF 원문</span>
               </a>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onEditColumn(column);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-stone-300 bg-white hover:bg-[#EFECE5] transition-colors cursor-pointer whitespace-nowrap"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              <span>수정</span>
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onEditColumn(column);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-stone-300 bg-white hover:bg-[#EFECE5] transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>수정</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

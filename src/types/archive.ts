@@ -77,6 +77,8 @@ export interface ProfessorProfile {
   googleSheetUrl?: string;
   googleSheetWebhookUrl?: string;
   hasPasscode?: boolean;
+  envPasscodeActive?: boolean;
+  adminPasscodeHash?: string;
   studioPasscode?: string;
 }
 
@@ -99,10 +101,31 @@ export interface ColumnArticle {
   updatedAt: string;
 }
 
+export type BoardCategory = 'video' | 'material' | 'notice';
+
+export interface BoardPost {
+  id: string;
+  category: BoardCategory;
+  title: string;
+  author: string;
+  publishedAt: string;
+  summary: string;
+  content: string;
+  videoUrl?: string;
+  sourceType?: VideoSourceType;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  externalUrl?: string;
+  pinned: boolean;
+  viewCount: number;
+  updatedAt: string;
+}
+
 export interface ArchiveData {
   profile: ProfessorProfile;
   series: LectureSeries[];
   lectures: Lecture[];
   columns?: ColumnArticle[];
+  boardPosts?: BoardPost[];
   applications?: LectureApplication[];
 }

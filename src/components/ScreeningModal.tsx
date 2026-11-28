@@ -11,6 +11,7 @@ import { ArtFrame } from './ArtFrame.tsx';
 interface ScreeningModalProps {
   lecture: Lecture | null;
   seriesList: LectureSeries[];
+  isAdmin: boolean;
   onClose: () => void;
   onEditLecture: (lecture: Lecture) => void;
 }
@@ -18,6 +19,7 @@ interface ScreeningModalProps {
 export function ScreeningModal({
   lecture,
   seriesList,
+  isAdmin,
   onClose,
   onEditLecture,
 }: ScreeningModalProps) {
@@ -75,17 +77,19 @@ export function ScreeningModal({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onEditLecture(lecture);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-stone-300 text-stone-700 hover:bg-[#EFECE5] transition-colors cursor-pointer whitespace-nowrap"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              <span>강의 수정</span>
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onEditLecture(lecture);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-stone-300 text-stone-700 hover:bg-[#EFECE5] transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>강의 수정</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -142,17 +146,19 @@ export function ScreeningModal({
                       <p className="mt-2 text-xs sm:text-sm text-stone-300 max-w-md leading-relaxed">
                         이 견본 강의에 교수님께서 제작하신 YouTube, Vimeo 링크나 직접 녹화한 MP4 영상 파일을 연결하면 바로 재생됩니다.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onClose();
-                          onEditLecture(lecture);
-                        }}
-                        className="mt-5 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-[#FAF9F6] text-[#161616] hover:bg-stone-200 transition-colors cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>영상 파일 · URL 연결하기</span>
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onEditLecture(lecture);
+                          }}
+                          className="mt-5 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-[#FAF9F6] text-[#161616] hover:bg-stone-200 transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>영상 파일 · URL 연결하기</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

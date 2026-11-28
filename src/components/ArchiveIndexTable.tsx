@@ -5,6 +5,7 @@ import { formatKoreanDate } from '../utils/video.ts';
 interface ArchiveIndexTableProps {
   lectures: Lecture[];
   seriesList: LectureSeries[];
+  isAdmin: boolean;
   onWatchLecture: (lecture: Lecture) => void;
   onEditLecture: (lecture: Lecture) => void;
 }
@@ -18,10 +19,14 @@ const STATUS_LABEL: Record<LectureStatus, string> = {
 export function ArchiveIndexTable({
   lectures,
   seriesList,
+  isAdmin,
   onWatchLecture,
   onEditLecture,
 }: ArchiveIndexTableProps) {
-  const sortedLectures = [...lectures].sort((a, b) =>
+  const visibleLectures = isAdmin
+    ? lectures
+    : lectures.filter((l) => l.status === 'published');
+  const sortedLectures = [...visibleLectures].sort((a, b) =>
     b.publishedAt.localeCompare(a.publishedAt)
   );
 
@@ -38,7 +43,7 @@ export function ArchiveIndexTable({
             </h2>
           </div>
           <p className="text-xs font-mono text-stone-600 tabular-nums">
-            총 {lectures.length}건 기록됨 (초안 및 예정 포함)
+            총 {sortedLectures.length}건 기록됨{isAdmin ? ' (초안 및 예정 포함)' : ''}
           </p>
         </div>
 
@@ -110,14 +115,16 @@ export function ArchiveIndexTable({
                           <Play className="w-3 h-3 fill-current" />
                           <span>보기</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onEditLecture(lecture)}
-                          className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          <span>수정</span>
-                        </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => onEditLecture(lecture)}
+                            className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-[#161616] cursor-pointer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span>수정</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

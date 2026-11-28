@@ -121,3 +121,18 @@ export function formatKoreanDate(dateStr: string): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}.${month}.${day}`;
 }
+
+export function isSafeHttpOrRelativeUrl(rawUrl: string | undefined): boolean {
+  if (!rawUrl) return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}

@@ -54,8 +54,9 @@ interface StudioDrawerProps {
   editingColumn: ColumnArticle | null;
   archive: ArchiveData;
   applications: LectureApplication[];
-  passcodeHeader: string;
-  onPasscodeVerified: (code: string) => void;
+  adminToken: string;
+  onTokenIssued: (token: string, archive?: ArchiveData) => void;
+  onLogout: () => void;
   onClose: () => void;
   onSaveLecture: (lecture: Partial<Lecture>, isNew: boolean) => Promise<void>;
   onDeleteLecture: (id: string) => Promise<void>;
@@ -105,8 +106,9 @@ export function StudioDrawer({
   editingColumn,
   archive,
   applications,
-  passcodeHeader,
-  onPasscodeVerified,
+  adminToken,
+  onTokenIssued,
+  onLogout,
   onClose,
   onSaveLecture,
   onDeleteLecture,
@@ -127,6 +129,7 @@ export function StudioDrawer({
   const [activeTab, setActiveTab] = useState<StudioTab>(initialTab);
   const [unlocked, setUnlocked] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
+  const [confirmPasscodeInput, setConfirmPasscodeInput] = useState('');
   const [authError, setAuthError] = useState('');
 
   // Lecture Editor Form State
@@ -180,13 +183,13 @@ export function StudioDrawer({
     setFeedback(null);
     setConfirmDeleteId(null);
 
-    if (!archive.profile.hasPasscode || passcodeHeader) {
+    if (adminToken) {
       setUnlocked(true);
       void onFetchApplications();
     } else {
       setUnlocked(false);
     }
-  }, [isOpen, initialTab, archive.profile.hasPasscode, passcodeHeader, onFetchApplications]);
+  }, [isOpen, initialTab, adminToken, onFetchApplications]);
 
   useEffect(() => {
     if (editingLecture) {
@@ -223,19 +226,37 @@ export function StudioDrawer({
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode: passcodeInput }),
-      });
-      if (!res.ok) {
-        setAuthError('스튜디오 비밀번호가 일치하지 않습니다.');
+    const isSetup = !archive.profile.hasPasscode;
+    if (isSetup) {
+      if (passcodeInput.trim().length < 4) {
+        setAuthError('관리자 비밀번호는 최소 4자 이상이어야 합니다.');
         return;
       }
-      onPasscodeVerified(passcodeInput);
+      if (passcodeInput.trim() !== confirmPasscodeInput.trim()) {
+        setAuthError('비밀번호 확인이 일치하지 않습니다.');
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(isSetup ? '/api/auth/setup' : '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: passcodeInput.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        token?: string;
+        archive?: ArchiveData;
+        error?: string;
+      };
+      if (!res.ok || !data.token) {
+        setAuthError(data.error || '관리자 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      onTokenIssued(data.token, data.archive);
       setUnlocked(true);
       setPasscodeInput('');
+      setConfirmPasscodeInput('');
       void onFetchApplications();
     } catch {
       setAuthError('인증 확인 중 오류가 발생했습니다.');
@@ -261,7 +282,7 @@ export function StudioDrawer({
         headers: {
           'Content-Type': file.type || 'application/octet-stream',
           'x-file-name': encodeURIComponent(file.name),
-          ...(passcodeHeader ? { 'x-studio-passcode': passcodeHeader } : {}),
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
         },
         body: file,
       });
@@ -462,7 +483,6 @@ export function StudioDrawer({
       }
       await onSaveProfile(payload);
       if (newPasscode) {
-        onPasscodeVerified(newPasscode);
         setNewPasscode('');
       }
       setFeedback({ type: 'ok', text: '교수자 정보 및 사이트 설정이 저장되었습니다.' });
@@ -515,14 +535,28 @@ export function StudioDrawer({
               교수자 영상 등록 및 아카이브 관리
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="스튜디오 닫기"
-            className="p-2 text-stone-600 hover:text-[#161616] hover:bg-stone-200/70 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {unlocked && (
+              <button
+                type="button"
+                onClick={() => {
+                  onLogout();
+                  onClose();
+                }}
+                className="px-3 py-1.5 text-xs font-medium border border-stone-300 bg-white text-stone-700 hover:bg-[#EFECE5] transition-colors cursor-pointer whitespace-nowrap"
+              >
+                열람자 모드로 전환
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="스튜디오 닫기"
+              className="p-2 text-stone-600 hover:text-[#161616] hover:bg-stone-200/70 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Passcode Gate if locked */}
@@ -534,19 +568,31 @@ export function StudioDrawer({
             >
               <Lock className="w-6 h-6 text-[#1D3557] mb-3" />
               <h3 className="font-serif text-2xl font-semibold text-[#161616]">
-                교수자 스튜디오 인증
+                {archive.profile.hasPasscode ? '관리자 모드 인증' : '관리자 비밀번호 최초 설정'}
               </h3>
               <p className="mt-2 text-xs text-stone-600 leading-relaxed">
-                영상을 등록하거나 웹사이트 구성을 변경하려면 설정된 스튜디오 비밀번호를 입력하세요.
+                {archive.profile.hasPasscode
+                  ? '영상을 등록하거나 웹사이트 구성을 변경하려면 설정된 관리자 비밀번호를 입력하세요.'
+                  : '관리자 비밀번호를 최초 1회 설정하면 이후 관리자 모드에서만 게시물을 등록·수정할 수 있습니다.'}
               </p>
               <input
                 type="password"
                 value={passcodeInput}
                 onChange={(e) => setPasscodeInput(e.target.value)}
-                placeholder="비밀번호 입력"
+                placeholder={archive.profile.hasPasscode ? '비밀번호 입력' : '새 비밀번호 (4자 이상)'}
                 required
                 className="mt-5 w-full px-3.5 py-2.5 text-sm border border-stone-300 focus:outline-none focus:border-[#1D3557]"
               />
+              {!archive.profile.hasPasscode && (
+                <input
+                  type="password"
+                  value={confirmPasscodeInput}
+                  onChange={(e) => setConfirmPasscodeInput(e.target.value)}
+                  placeholder="비밀번호 확인"
+                  required
+                  className="mt-3 w-full px-3.5 py-2.5 text-sm border border-stone-300 focus:outline-none focus:border-[#1D3557]"
+                />
+              )}
               {authError && (
                 <p className="mt-2 text-xs text-red-700">{authError}</p>
               )}
@@ -554,7 +600,7 @@ export function StudioDrawer({
                 type="submit"
                 className="mt-5 w-full py-2.5 text-sm font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors cursor-pointer"
               >
-                잠금 해제
+                {archive.profile.hasPasscode ? '관리자 모드 입장' : '비밀번호 설정 후 입장'}
               </button>
             </form>
           </div>
@@ -1623,17 +1669,41 @@ export function StudioDrawer({
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <a
-                        href={`/api/applications/export.csv${
-                          passcodeHeader
-                            ? `?passcode=${encodeURIComponent(passcodeHeader)}`
-                            : ''
-                        }`}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors whitespace-nowrap"
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/applications/export.csv', {
+                              headers: adminToken
+                                ? { Authorization: `Bearer ${adminToken}` }
+                                : {},
+                            });
+                            if (!res.ok) {
+                              setFeedback({
+                                type: 'err',
+                                text: 'CSV 파일을 내려받으려면 관리자 인증이 필요합니다.',
+                              });
+                              return;
+                            }
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `lecture-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          } catch {
+                            setFeedback({
+                              type: 'err',
+                              text: 'CSV 다운로드 중 오류가 발생했습니다.',
+                            });
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-[#1D3557] text-[#FAF9F6] hover:bg-[#152843] transition-colors whitespace-nowrap cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>구글 시트용 CSV 다운로드</span>
-                      </a>
+                      </button>
                       <button
                         type="button"
                         onClick={async () => {
@@ -2042,18 +2112,21 @@ export function StudioDrawer({
                       </div>
                       <div className="sm:col-span-2 pt-3 border-t border-stone-200">
                         <label className="block text-xs font-medium text-stone-700 mb-1">
-                          스튜디오 잠금 비밀번호 설정 (선택 사항)
+                          관리자 모드 비밀번호 변경 (선택 사항)
                         </label>
                         <input
                           type="password"
                           value={newPasscode}
                           onChange={(e) => setNewPasscode(e.target.value)}
                           placeholder={
-                            archive.profile.hasPasscode
-                              ? '새 비밀번호 입력 시 변경됩니다'
-                              : '비워두면 비밀번호 없이 바로 편집 가능'
+                            archive.profile.envPasscodeActive
+                              ? '환경 변수(ADMIN_PASSCODE)로 잠금 중입니다'
+                              : archive.profile.hasPasscode
+                              ? '새 비밀번호(4자 이상) 입력 시 변경됩니다'
+                              : '새 관리자 비밀번호 입력 (4자 이상)'
                           }
-                          className="w-full px-3 py-2 text-sm bg-white border border-stone-300"
+                          disabled={Boolean(archive.profile.envPasscodeActive)}
+                          className="w-full px-3 py-2 text-sm bg-white border border-stone-300 disabled:bg-stone-100 disabled:text-stone-500"
                         />
                       </div>
                     </div>
